@@ -1,56 +1,29 @@
 name: CustomContainer-sync2
 
 on:
-  workflow_dispatch:
-    inputs:
-      OVERWRITTEN:
-        description: "Overwritten fields"
-        required: true
-      PAYLOAD_URL:
-        description: "URL to payload"
-        required: true
-
-permissions:
-  id-token: write
+    workflow_dispatch:
+        inputs:
+            OVERWRITTEN:
+                description: "Overwritten fields"
+                required: true
+            PAYLOAD_URL:
+                description: "URL to payload"
+                required: true
 
 jobs:
-  login-to-amazon-ecr:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::421565149964:role/github-faasr-python
-          aws-region: us-east-1
-          mask-aws-account-id: "false"
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: "false"
-    outputs:
-      registry: ${{ steps.login-ecr.outputs.registry }}
-      docker_username: ${{ steps.login-ecr.outputs.docker_username_421565149964_dkr_ecr_us_east_1_amazonaws_com }}
-      docker_password: ${{ steps.login-ecr.outputs.docker_password_421565149964_dkr_ecr_us_east_1_amazonaws_com }}
+    run_docker_image:
+        runs-on: ubuntu-latest
+        container: ghcr.io/faasr/github-actions-python:latest
 
-  run_docker_image:
-    needs: login-to-amazon-ecr
-    runs-on: ubuntu-latest
-    container:
-      image: ${{ needs.login-to-amazon-ecr.outputs.registry }}/faasr/test-python:latest
-      credentials:
-        username: ${{ needs.login-to-amazon-ecr.outputs.docker_username }}
-        password: ${{ needs.login-to-amazon-ecr.outputs.docker_password }}
+        env:
+            GH_PAT: ${{ secrets.GH_PAT}}
+            S3_AccessKey: ${{ secrets.S3_AccessKey}}
+            S3_SecretKey: ${{ secrets.S3_SecretKey}}
+            OVERWRITTEN: ${{ github.event.inputs.OVERWRITTEN }}
+            PAYLOAD_URL: ${{ github.event.inputs.PAYLOAD_URL }}
 
-    env:
-      GH_PAT: ${{ secrets.GH_PAT}}
-      S3_AccessKey: ${{ secrets.S3_AccessKey}}
-      S3_SecretKey: ${{ secrets.S3_SecretKey}}
-      OVERWRITTEN: ${{ github.event.inputs.OVERWRITTEN }}
-      PAYLOAD_URL: ${{ github.event.inputs.PAYLOAD_URL }}
-
-    steps:
-      - name: Run Python entrypoint
-        run: |
-          cd /action
-          python3 faasr_entry.py
+        steps:
+          - name: Run Python entrypoint
+            run: |
+                cd /action
+                python3 faasr_entry.py
