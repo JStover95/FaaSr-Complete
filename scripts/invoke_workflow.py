@@ -158,7 +158,7 @@ def main(testing: bool = False) -> FaaSrPayload:
         faasr_scheduler = Scheduler(workflow)
         logger.info(f"Triggering entry action: {entry_action_name}")
 
-        # faasr_scheduler.trigger_func(workflow_name, entry_action_name)
+        faasr_scheduler.trigger_func(workflow_name, entry_action_name)
     except Exception as e:
         logger.error(f"Trigger failed: {e}")
         sys.exit(1)
