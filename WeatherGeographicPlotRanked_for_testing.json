@@ -58,9 +58,9 @@
   "FunctionInvoke": "GetData",
   "DefaultDataStore": "S3",
   "FunctionGitRepo": {
-    "get_geo_data_and_stations_ranked": "FaaSr/FaaSr-Functions/WeatherGeographicPlot/python/01_get_data.py",
-    "process_ghcnd_data_ranked": "FaaSr/FaaSr-Functions/WeatherGeographicPlot/python/02_process_data.py",
-    "plot_county_weekly_temperature_ranked": "FaaSr/FaaSr-Functions/WeatherGeographicPlot/python/03_plot_data.py"
+    "get_geo_data_and_stations_ranked": "FaaSr/FaaSr-Functions/main/WeatherGeographicPlot/python/01_get_data.py",
+    "process_ghcnd_data_ranked": "FaaSr/FaaSr-Functions/main/WeatherGeographicPlot/python/02_process_data.py",
+    "plot_county_weekly_temperature_ranked": "FaaSr/FaaSr-Functions/main/WeatherGeographicPlot/python/03_plot_data.py"
   },
   "PyPIPackageDownloads": {
     "get_geo_data_and_stations_ranked": ["geopandas"],
