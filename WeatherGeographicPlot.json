@@ -60,9 +60,9 @@
   "FunctionInvoke": "GetData",
   "DefaultDataStore": "S3",
   "FunctionGitRepo": {
-    "get_geo_data_and_stations": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python",
-    "process_ghcnd_data": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python",
-    "plot_county_weekly_temperature": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python"
+    "get_geo_data_and_stations": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python/01_get_data.py",
+    "process_ghcnd_data": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python/02_process_data.py",
+    "plot_county_weekly_temperature": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python/03_plot_data.py"
   },
   "PyPIPackageDownloads": {
     "get_geo_data_and_stations": [
