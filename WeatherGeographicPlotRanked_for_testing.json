@@ -51,9 +51,9 @@
     }
   },
   "ActionContainers": {
-    "GetData": "ghcr.io/faasr/github-actions-python:latest",
-    "ProcessData": "ghcr.io/faasr/github-actions-python:latest",
-    "PlotData": "ghcr.io/faasr/github-actions-python:latest"
+    "GetData": "jessestover/faasr-traceback-logging-python:latest",
+    "ProcessData": "jessestover/faasr-traceback-logging-python:latest",
+    "PlotData": "jessestover/faasr-traceback-logging-python:latest"
   },
   "FunctionInvoke": "GetData",
   "DefaultDataStore": "S3",
