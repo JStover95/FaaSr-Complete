@@ -18,7 +18,8 @@
     "GetPhilomathData": {
       "Arguments": {
         "folder_name": "WeatherVisualization",
-        "output_name": "PhilomathData.csv"
+        "output_name": "PhilomathData.csv",
+        "station_id": "US1ORBN0028"
       },
       "InvokeNext": [
         {
