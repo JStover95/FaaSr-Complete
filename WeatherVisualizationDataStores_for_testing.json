@@ -69,7 +69,7 @@
       "InvokeNext": [],
       "FaaSServer": "GH",
       "Type": "Python",
-      "FunctionName": "plot_weather_comparison_backblaze"
+      "FunctionName": "plot_weather_comparison_data_stores"
     }
   },
   "ComputeServers": {
