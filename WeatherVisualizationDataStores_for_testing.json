@@ -106,11 +106,11 @@
   "FunctionGitRepo": {
     "get_ghcnd_data": "JStover95/FaaSr-Functions/WeatherVisualization/python",
     "compare_to_yearly_average": "JStover95/FaaSr-Functions/WeatherVisualization/python",
-    "plot_weather_comparison": "JStover95/FaaSr-Functions/WeatherVisualization/python"
+    "plot_weather_comparison_data_stores": "JStover95/FaaSr-Functions/WeatherVisualization/python"
   },
   "PyPIPackageDownloads": {
     "compare_to_yearly_average": ["pandas"],
-    "plot_weather_comparison": ["pandas", "matplotlib"]
+    "plot_weather_comparison_data_stores": ["pandas", "matplotlib"]
   },
   "FaaSrLog": "FaaSrLog",
   "LoggingDataStore": "S3",
