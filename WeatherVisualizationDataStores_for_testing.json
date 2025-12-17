@@ -90,8 +90,7 @@
     },
     "Backblaze": {
       "Endpoint": "https://s3.us-east-005.backblazeb2.com",
-      "Bucket": "faasr-sample-functions",
-      "Region": "us-east-005"
+      "Bucket": "faasr-sample-functions"
     }
   },
   "ActionContainers": {
