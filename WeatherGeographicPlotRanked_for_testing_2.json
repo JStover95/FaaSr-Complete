@@ -4,35 +4,33 @@
       "Arguments": {
         "folder_name": "WeatherGeographicPlot",
         "state_name": "Oregon",
-        "county_name": "Benton"
+        "county_name": "Benton",
+        "num_ranks": 4
       },
-      "InvokeNext": [
-        "ProcessData"
-      ],
+      "InvokeNext": ["ProcessData(4)"],
       "FaaSServer": "GH",
       "Type": "Python",
-      "FunctionName": "get_geo_data_and_stations"
+      "FunctionName": "get_geo_data_and_stations_ranked"
     },
     "ProcessData": {
       "Arguments": {
         "folder_name": "WeatherGeographicPlot"
       },
-      "InvokeNext": [
-        "PlotData"
-      ],
+      "InvokeNext": ["PlotData"],
       "FaaSServer": "GH",
       "Type": "Python",
-      "FunctionName": "process_ghcnd_data"
+      "FunctionName": "process_ghcnd_data_ranked"
     },
     "PlotData": {
       "Arguments": {
         "folder_name": "WeatherGeographicPlot",
-        "county_name": "Benton"
+        "county_name": "Benton",
+        "num_ranks": 4
       },
       "InvokeNext": [],
       "FaaSServer": "GH",
       "Type": "Python",
-      "FunctionName": "plot_county_weekly_temperature"
+      "FunctionName": "plot_county_weekly_temperature_ranked"
     }
   },
   "ComputeServers": {
@@ -60,18 +58,14 @@
   "FunctionInvoke": "GetData",
   "DefaultDataStore": "S3",
   "FunctionGitRepo": {
-    "get_geo_data_and_stations": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python/01_get_data.py",
-    "process_ghcnd_data": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python/02_process_data.py",
-    "plot_county_weekly_temperature": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python/03_plot_data.py"
+    "get_geo_data_and_stations_ranked": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python",
+    "process_ghcnd_data_ranked": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python",
+    "plot_county_weekly_temperature_ranked": "JStover95/FaaSr-Functions/WeatherGeographicPlot/python"
   },
   "PyPIPackageDownloads": {
-    "get_geo_data_and_stations": [
-      "geopandas"
-    ],
-    "process_ghcnd_data": [
-      "geopandas"
-    ],
-    "plot_county_weekly_temperature": [
+    "get_geo_data_and_stations_ranked": ["geopandas"],
+    "process_ghcnd_data_ranked": ["geopandas"],
+    "plot_county_weekly_temperature_ranked": [
       "geopandas",
       "matplotlib",
       "numpy",
@@ -80,6 +74,6 @@
   },
   "FaaSrLog": "FaaSrLog",
   "LoggingDataStore": "S3",
-  "WorkflowName": "WeatherGeographicPlot",
+  "WorkflowName": "WeatherGeographicPlotRanked2",
   "InvocationIDFromDate": "%Y-%m-%d-%H-%M-%S"
 }
