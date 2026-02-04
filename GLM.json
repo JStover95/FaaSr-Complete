@@ -1,5 +1,12 @@
 {
   "ActionList": {
+    "Empty": {
+      "Arguments": {},
+      "InvokeNext": ["RunGLM"],
+      "FaaSServer": "GH",
+      "Type": "Python",
+      "FunctionName": "empty_function"
+    },
     "RunGLM": {
       "Arguments": {
         "folder": "GLM"
@@ -28,11 +35,13 @@
     }
   },
   "ActionContainers": {
+    "Empty": "ghcr.io/faasr/github-actions-python:latest",
     "RunGLM": "jessestover/faasr-glm-test:latest"
   },
-  "FunctionInvoke": "RunGLM",
+  "FunctionInvoke": "Empty",
   "DefaultDataStore": "S3",
   "FunctionGitRepo": {
+    "empty_function": "JStover95/FaaSr-Functions",
     "run_glm_tutorial": "JStover95/FaaSr-workflow"
   },
   "FaaSrLog": "FaaSrLog",
