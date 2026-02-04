@@ -4,6 +4,7 @@
       "Arguments": {
         "folder": "GLM"
       },
+      "InvokeNext": [],
       "FaaSServer": "GH",
       "Type": "R",
       "FunctionName": "run_glm_tutorial"
