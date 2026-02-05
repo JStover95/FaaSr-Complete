@@ -57,28 +57,50 @@ run_glm_tutorial <- function(folder) {
   # Upload debug log and plots to the workflow data store
   prefix <- paste0(invocation_id, "/")
 
-  if (file.exists(log_file)) {
-    remote_file <- paste0(prefix, "runtime_debug.log")
-    faasr_put_file(local_file = log_file, remote_folder = folder, remote_file = remote_file)
-    faasr_log(paste0("Uploaded ", remote_file))
+  # Helper function to safely upload files
+  safe_upload <- function(local_path, remote_name, description) {
+    # Normalize path to ensure it's absolute and properly formatted
+    local_path <- normalizePath(local_path, mustWork = FALSE)
+    if (!file.exists(local_path)) {
+      faasr_log(paste0("Warning: ", description, " not found: ", local_path))
+      return(FALSE)
+    }
+    tryCatch({
+      remote_file <- paste0(prefix, remote_name)
+      faasr_put_file(local_file = local_path, remote_folder = folder, remote_file = remote_file)
+      faasr_log(paste0("Uploaded ", description, ": ", remote_file))
+      return(TRUE)
+    }, error = function(e) {
+      faasr_log(paste0("Error uploading ", description, ": ", conditionMessage(e)))
+      return(FALSE)
+    })
   }
 
+  # Upload debug log
+  safe_upload(log_file, "runtime_debug.log", "debug log")
+
+  # Upload plots
   plots_dir <- file.path(tutorial_dir, "plots")
   plot_names <- c("bioshade_feedback.png", "nutrient_drawdown.png", "stokes_law.png")
   for (p in plot_names) {
     local_path <- file.path(plots_dir, p)
-    if (file.exists(local_path)) {
-      remote_file <- paste0(prefix, p)
-      faasr_put_file(local_file = local_path, remote_folder = folder, remote_file = remote_file)
-      faasr_log(paste0("Uploaded ", remote_file))
-    }
+    safe_upload(local_path, p, paste0("plot ", p))
   }
 
   # Optional: write a small success/failure marker for downstream actions
-  marker <- paste0("glm_tutorial_exit_", exit_code, ".txt")
-  cat(paste0("exit_code=", exit_code, "\n"), file = marker)
-  faasr_put_file(local_file = marker, remote_folder = folder, remote_file = paste0(prefix, marker))
-  faasr_log(paste0("Uploaded marker ", marker))
+  marker_name <- paste0("glm_tutorial_exit_", exit_code, ".txt")
+  marker_path <- file.path(tutorial_dir, marker_name)
+  tryCatch({
+    # Write marker file and ensure it's flushed
+    con <- file(marker_path, "w")
+    writeLines(paste0("exit_code=", exit_code), con)
+    close(con)
+    # Small delay to ensure file is fully written
+    Sys.sleep(0.1)
+    safe_upload(marker_path, marker_name, "marker file")
+  }, error = function(e) {
+    faasr_log(paste0("Error creating marker file: ", conditionMessage(e)))
+  })
 
   invisible(exit_code)
 }
