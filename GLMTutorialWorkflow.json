@@ -15,15 +15,6 @@
       "FaaSServer": "GH",
       "Type": "R",
       "FunctionName": "run_glm_tutorial"
-    },
-    "run-glm-tutorial": {
-      "Arguments": {
-        "folder": "glm-tutorial-runs"
-      },
-      "InvokeNext": [],
-      "FaaSServer": "GH",
-      "Type": "R",
-      "FunctionName": "run_glm_tutorial"
     }
   },
   "ComputeServers": {
