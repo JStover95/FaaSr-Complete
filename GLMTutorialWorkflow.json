@@ -22,7 +22,7 @@
       "FaaSType": "GitHubActions",
       "UserName": "JStover95",
       "UseSecretStore": true,
-      "ActionRepoName": "FaaSr-GLM",
+      "ActionRepoName": "FaaSr-workflow",
       "Branch": "main"
     }
   },
@@ -41,7 +41,7 @@
   "DefaultDataStore": "S3",
   "FunctionGitRepo": {
     "empty_function": "JStover95/FaaSr-Functions",
-    "run_glm_tutorial": "JStover95/FaaSr-workflow"
+    "run_glm_tutorial": "JStover95/FaaSr-GLM"
   },
   "LoggingDataStore": "S3",
   "FaaSrLog": "FaaSrLog",
