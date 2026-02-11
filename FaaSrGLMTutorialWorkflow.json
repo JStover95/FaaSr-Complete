@@ -35,7 +35,7 @@
     }
   },
   "ActionContainers": {
-    "NullStart": "ghcr.io/faasr/github-actions-python:latest",
+    "NullStart": "ghcr.io/faasr/github-actions-r:latest",
     "RunGLM": "jessestover/faasr-glm-tutorial:latest"
   },
   "FunctionInvoke": "NullStart",
