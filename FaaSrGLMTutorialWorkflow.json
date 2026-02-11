@@ -5,7 +5,7 @@
         "RunGLM"
       ],
       "FaaSServer": "GH",
-      "Type": "Python",
+      "Type": "R",
       "FunctionName": "null_start"
     },
     "RunGLM": {
