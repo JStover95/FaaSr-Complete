@@ -17,8 +17,6 @@ jobs:
 
         env:
             GH_PAT: ${{ secrets.GH_PAT}}
-            S3_AccessKey: ${{ secrets.S3_AccessKey}}
-            S3_SecretKey: ${{ secrets.S3_SecretKey}}
             Backblaze_AccessKey: ${{ secrets.Backblaze_AccessKey}}
             Backblaze_SecretKey: ${{ secrets.Backblaze_SecretKey}}
             OVERWRITTEN: ${{ github.event.inputs.OVERWRITTEN }}
