@@ -88,11 +88,6 @@
     }
   },
   "DataStores": {
-    "S3": {
-      "Endpoint": "https://s3.us-east-005.backblazeb2.com",
-      "Bucket": "faasr",
-      "Region": "us-east-1"
-    },
     "Backblaze": {
       "Endpoint": "https://s3.us-east-005.backblazeb2.com",
       "Bucket": "faasr-sample-functions",
