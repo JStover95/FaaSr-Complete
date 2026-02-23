@@ -606,6 +606,7 @@ def deploy_to_ow(workflow_data):
                 container_image = workflow_data.get("ActionContainers", {}).get(
                     action_name
                 )
+                logger.info(f"Container image: {container_image}")
 
                 if not container_image:
                     logger.error(f"No container specified for action: {action_name}")
