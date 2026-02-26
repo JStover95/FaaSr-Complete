@@ -10,7 +10,8 @@
     },
     "RunGLM": {
       "Arguments": {
-        "folder": "GLM"
+        "folder": "GLM",
+        "output": "bioshade_feedback/bioshade_feedback_A/output/output.nc"
       },
       "InvokeNext": [],
       "FaaSServer": "GH",
