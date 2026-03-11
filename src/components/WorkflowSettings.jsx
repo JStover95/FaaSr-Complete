@@ -1,17 +1,13 @@
 import { useWorkflowContext } from "../WorkflowContext"
-import { useRef, useState } from "react";
 import useUndo from './Utils/Undo'
 import TextInput from "./Utils/TextInput";
 import useWorkflowUtils from "./Utils/WorkflowUtils";
 import GenericLabel from "./Utils/GenericLabel";
 
 export default function WorkflowSettings(props){
-    const {workflow, setWorkflow, invocationIDType, setInvocationIDType} = useWorkflowContext();
+    const {workflow, invocationIDType, setInvocationIDType} = useWorkflowContext();
     const { updateWorkflow } = useUndo();
     const { applyWorkflowChanges } = useWorkflowUtils()
-    const [ settingsError, setSettingsError ] = useState("")
-
-
     const handleBlur = () => {
         updateWorkflow(workflow);
     }
@@ -42,8 +38,6 @@ const handleChangeIDType = (newType) => {
     setInvocationIDType(newType);
 }
     
-    const exampleUUID = useRef(crypto.randomUUID());
-
     const invocationIDInput = ( type ) => {
         switch (type) {
             case "Custom":
@@ -129,6 +123,47 @@ const handleChangeIDType = (newType) => {
             {
                 invocationIDInput(invocationIDType)
             }
+
+            {/* Workflow Secrets */}
+            <br></br>
+            <div>
+                <GenericLabel value={"Workflow Secrets"} size={"20px"} />
+                {(workflow.Secrets ?? []).map((secret, index) => (
+                    <div key={index} style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}>
+                        <TextInput
+                            value={secret}
+                            onChange={(e) => {
+                                const newSecrets = [...(workflow.Secrets ?? [])];
+                                newSecrets[index] = e.target.value;
+                                applyWorkflowChanges({ Secrets: newSecrets });
+                            }}
+                            onBlur={handleBlur}
+                            placeholder={"SECRET_NAME"}
+                        />
+                        <button
+                            type="button"
+                            style={{ marginLeft: "8px" }}
+                            onClick={() => {
+                                const currentSecrets = workflow.Secrets ?? [];
+                                const newSecrets = currentSecrets.filter((_, i) => i !== index);
+                                applyWorkflowChanges({ Secrets: newSecrets });
+                            }}
+                        >
+                            Remove
+                        </button>
+                    </div>
+                ))}
+                <button
+                    type="button"
+                    onClick={() => {
+                        const currentSecrets = workflow.Secrets ?? [];
+                        const newSecrets = [...currentSecrets, ""];
+                        applyWorkflowChanges({ Secrets: newSecrets });
+                    }}
+                >
+                    Add secret
+                </button>
+            </div>
 
             
             {/* Data and Logs */}
