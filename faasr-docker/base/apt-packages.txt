@@ -1,0 +1,7 @@
+curl
+unzip
+g++
+make
+cmake
+libcurl4-openssl-dev
+libsodium-dev
