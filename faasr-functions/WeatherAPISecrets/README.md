@@ -571,9 +571,9 @@ Add the following arguments:
 
 - `folder_name`: `WeatherAPISecrets`
 - `output_name`: `raw_weather_data.json`
-- `lat`: `45.5152` (Portland, OR latitude)
-- `lon`: `-122.6784` (Portland, OR longitude)
-- `location_name`: `Portland, OR`
+- `lat`: `44.5646` (Corvallis, OR latitude)
+- `lon`: `-123.2620` (Corvallis, OR longitude)
+- `location_name`: `Corvallis, OR`
 
 To use a different location, find its coordinates at [https://www.latlong.net/](https://www.latlong.net/) or use OpenWeather's Geocoding API.
 
