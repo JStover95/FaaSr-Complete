@@ -94,7 +94,7 @@ When you register your workflow, FaaSr automatically injects the secrets from yo
 
 ## Getting an OpenWeather API Key
 
-To use this workflow, you'll need an API key from OpenWeather that supports the One Call API 3.0:
+To use this workflow, you'll need a free API key from OpenWeather:
 
 1. Visit [https://openweathermap.org/api](https://openweathermap.org/api)
 2. Click "Sign Up" to create a free account
@@ -102,16 +102,11 @@ To use this workflow, you'll need an API key from OpenWeather that supports the 
 4. Copy your default API key (or generate a new one)
 5. Keep this key handy - you'll need it when setting up GitHub secrets
 
-**Important:** This workflow uses the One Call API 3.0, which requires the "One Call by Call" subscription. OpenWeather provides this with a free tier that includes:
+The free tier includes:
 
 - 1,000 API calls per day
 - Current weather data
-- Minute forecast for 1 hour
-- Hourly forecast for 48 hours
-- Daily forecast for 8 days
-- Government weather alerts
-
-The workflow also uses the Geocoding API to convert city names to coordinates, which is included in the free tier.
+- 5-day forecast
 
 ## Writing our Functions
 
@@ -122,73 +117,26 @@ The first function demonstrates the key feature of this tutorial: using `faasr_s
 First, we import the necessary modules, including `faasr_secret`:
 
 ```python
-import json
 import requests
 from FaaSr_py.client.py_client_stubs import faasr_log, faasr_put_file, faasr_secret
 ```
 
-Since the One Call API 3.0 requires geographic coordinates, we first need a function to convert city names to coordinates using the OpenWeather Geocoding API:
+Next, we write a helper function to build the OpenWeather API URL:
 
 ```python
-def geocode_city(city: str, api_key: str) -> tuple[float, float, str]:
+def build_url(city: str, api_key: str) -> str:
     """
-    Convert a city name to geographic coordinates using the OpenWeather Geocoding API.
+    Build the URL for the OpenWeather API current weather endpoint.
 
     Args:
-        city: The name of the city to geocode.
-        api_key: The OpenWeather API key.
-
-    Returns:
-        A tuple of (latitude, longitude, full_location_name).
-    """
-    geocoding_url = "http://api.openweathermap.org/geo/1.0/direct"
-    params = {
-        "q": city,
-        "limit": 1,
-        "appid": api_key,
-    }
-
-    try:
-        response = requests.get(geocoding_url, params=params, timeout=20)
-        response.raise_for_status()
-
-        results = response.json()
-        if not results:
-            raise ValueError(f"No geocoding results found for city: {city}")
-
-        location = results[0]
-        lat = location["lat"]
-        lon = location["lon"]
-        name = location["name"]
-        country = location.get("country", "")
-        state = location.get("state", "")
-
-        full_name = f"{name}, {state}, {country}" if state else f"{name}, {country}"
-
-        return lat, lon, full_name
-
-    except Exception as e:
-        faasr_log(f"Error geocoding city {city}: {e}")
-        raise e
-```
-
-Now we write a helper function to build the One Call API 3.0 URL using coordinates:
-
-```python
-def build_weather_url(lat: float, lon: float, api_key: str) -> str:
-    """
-    Build the URL for the OpenWeather API 3.0 One Call endpoint.
-
-    Args:
-        lat: The latitude of the location.
-        lon: The longitude of the location.
+        city: The name of the city to get weather data for.
         api_key: The OpenWeather API key.
 
     Returns:
         The URL to fetch weather data from.
     """
-    base_url = "https://api.openweathermap.org/data/3.0/onecall"
-    return f"{base_url}?lat={lat}&lon={lon}&units=metric&appid={api_key}"
+    base_url = "https://api.openweathermap.org/data/2.5/weather"
+    return f"{base_url}?q={city}&appid={api_key}&units=metric"
 ```
 
 We also need a function to fetch the weather data and save it to a local file:
@@ -196,7 +144,7 @@ We also need a function to fetch the weather data and save it to a local file:
 ```python
 def fetch_weather_data(url: str, output_name: str) -> dict:
     """
-    Fetch weather data from the OpenWeather API 3.0 and save it to a local file.
+    Fetch weather data from the OpenWeather API and save it to a local file.
 
     Args:
         url: The URL to fetch weather data from.
@@ -212,6 +160,7 @@ def fetch_weather_data(url: str, output_name: str) -> dict:
         weather_data = response.json()
 
         with open(output_name, "w") as f:
+            import json
             json.dump(weather_data, f, indent=2)
 
         return weather_data
@@ -221,18 +170,16 @@ def fetch_weather_data(url: str, output_name: str) -> dict:
         raise e
 ```
 
-Now for the main function that demonstrates using `faasr_secret()` for multiple API calls:
+Now for the main function that demonstrates using `faasr_secret()`:
 
 ```python
 def get_weather_data(folder_name: str, output_name: str, city: str):
     """
-    Fetch current weather data from OpenWeather API 3.0 using a secret API key
+    Fetch current weather data from OpenWeather API using a secret API key
     and upload it to an S3 bucket.
 
     This function demonstrates the use of faasr_secret() to securely retrieve
-    API credentials. It uses the API key for two API calls:
-    1. Geocoding API to convert city name to coordinates
-    2. One Call API 3.0 to fetch comprehensive weather data
+    API credentials.
 
     Args:
         folder_name: The name of the folder to upload the data to.
@@ -245,25 +192,16 @@ def get_weather_data(folder_name: str, output_name: str, city: str):
     api_key = faasr_secret("OPENWEATHER_API_KEY")
     faasr_log("Successfully retrieved API key")
 
-    # 2. Geocode the city name to coordinates
-    faasr_log(f"Geocoding city: {city}")
-    lat, lon, full_location_name = geocode_city(city, api_key)
-    faasr_log(f"Geocoded {city} to coordinates: lat={lat}, lon={lon} ({full_location_name})")
+    # 2. Build the URL
+    url = build_url(city, api_key)
+    faasr_log(f"Fetching weather data for {city}")
 
-    # 3. Build the weather API URL using coordinates
-    url = build_weather_url(lat, lon, api_key)
-    faasr_log(f"Fetching weather data for {full_location_name}")
-
-    # 4. Fetch the weather data and save to local file
+    # 3. Fetch the weather data and save to local file
     weather_data = fetch_weather_data(url, output_name)
-    
-    current = weather_data.get("current", {})
-    temp = current.get("temp", "N/A")
-    description = current.get("weather", [{}])[0].get("description", "N/A")
-    
-    faasr_log(f"Fetched weather data: {full_location_name}, Temp: {temp}°C, {description}")
+    faasr_log(f"Fetched weather data: {weather_data.get('name', 'Unknown')}, "
+              f"Temp: {weather_data.get('main', {}).get('temp', 'N/A')}°C")
 
-    # 5. Upload the file to the S3 bucket
+    # 4. Upload the file to the S3 bucket
     faasr_put_file(
         local_file=output_name,
         remote_folder=folder_name,
@@ -276,9 +214,6 @@ def get_weather_data(folder_name: str, output_name: str, city: str):
 **Key Points:**
 
 - `faasr_secret("OPENWEATHER_API_KEY")` retrieves the secret value from the secure store
-- The secret is reused for **two different API calls** (geocoding and weather data)
-- This demonstrates that secrets can be used multiple times in the same function
-- The function uses the One Call API 3.0, which provides more comprehensive weather data
 - The secret name must exactly match what you configure in your workflow and GitHub
 - The function returns the secret value as a string
 - If the secret doesn't exist or can't be accessed, `faasr_secret()` will raise an error
@@ -319,44 +254,35 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
         return json.load(f)
 ```
 
-Next, we extract the key metrics we want to visualize from the One Call API 3.0 response:
+Next, we extract the key metrics we want to visualize:
 
 ```python
 def extract_weather_metrics(weather_data: dict) -> dict:
     """
-    Extract key weather metrics from the OpenWeather API 3.0 response.
+    Extract key weather metrics from the OpenWeather API response.
 
     Args:
-        weather_data: The raw weather data from OpenWeather API 3.0.
+        weather_data: The raw weather data from OpenWeather API.
 
     Returns:
         A dictionary containing extracted metrics.
     """
-    current = weather_data.get("current", {})
-    daily = weather_data.get("daily", [{}])[0] if weather_data.get("daily") else {}
-    
     metrics = {
-        "lat": weather_data.get("lat", 0),
-        "lon": weather_data.get("lon", 0),
-        "timezone": weather_data.get("timezone", "Unknown"),
-        "temperature": current.get("temp", 0),
-        "feels_like": current.get("feels_like", 0),
-        "temp_min": daily.get("temp", {}).get("min", 0),
-        "temp_max": daily.get("temp", {}).get("max", 0),
-        "humidity": current.get("humidity", 0),
-        "pressure": current.get("pressure", 0),
-        "wind_speed": current.get("wind_speed", 0),
-        "uvi": current.get("uvi", 0),
-        "clouds": current.get("clouds", 0),
-        "visibility": current.get("visibility", 0),
-        "description": current.get("weather", [{}])[0].get("description", "N/A"),
-        "icon": current.get("weather", [{}])[0].get("icon", "01d"),
+        "city": weather_data.get("name", "Unknown"),
+        "country": weather_data.get("sys", {}).get("country", "Unknown"),
+        "temperature": weather_data.get("main", {}).get("temp", 0),
+        "feels_like": weather_data.get("main", {}).get("feels_like", 0),
+        "temp_min": weather_data.get("main", {}).get("temp_min", 0),
+        "temp_max": weather_data.get("main", {}).get("temp_max", 0),
+        "humidity": weather_data.get("main", {}).get("humidity", 0),
+        "pressure": weather_data.get("main", {}).get("pressure", 0),
+        "wind_speed": weather_data.get("wind", {}).get("speed", 0),
+        "description": weather_data.get("weather", [{}])[0].get("description", "N/A"),
+        "icon": weather_data.get("weather", [{}])[0].get("icon", "01d"),
     }
     
     return metrics
 ```
-
-The One Call API 3.0 has a richer data structure with separate `current`, `hourly`, and `daily` objects. Here we extract current conditions and today's min/max temperatures from the daily forecast.
 
 A function to save the processed data:
 
@@ -398,7 +324,7 @@ def process_weather_data(folder_name: str, input_name: str, output_name: str):
 
     # 2. Extract weather metrics
     metrics = extract_weather_metrics(weather_data)
-    faasr_log(f"Extracted metrics for {metrics['timezone']}: "
+    faasr_log(f"Extracted metrics for {metrics['city']}, {metrics['country']}: "
               f"{metrics['temperature']}°C, {metrics['description']}")
 
     # 3. Save the processed data
@@ -443,22 +369,21 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
         return json.load(f)
 ```
 
-The visualization function creates a 2x3 grid of subplots showing comprehensive weather metrics from the One Call API 3.0:
+The visualization function creates a 2x2 grid of subplots:
 
 ```python
 def create_weather_visualization(metrics: dict, output_name: str) -> None:
     """
-    Create a visualization of the weather data from OpenWeather API 3.0.
+    Create a visualization of the weather data.
 
     Args:
         metrics: The processed weather metrics.
         output_name: The name of the output file to save the plot to.
     """
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     fig.suptitle(
-        f"Weather Data for {metrics['timezone']}\n"
-        f"{metrics['description'].title()} - "
-        f"Coordinates: ({metrics['lat']:.2f}, {metrics['lon']:.2f})",
+        f"Weather Data for {metrics['city']}, {metrics['country']}\n"
+        f"{metrics['description'].title()}",
         fontsize=16,
         fontweight="bold",
     )
@@ -466,7 +391,7 @@ def create_weather_visualization(metrics: dict, output_name: str) -> None:
     # Temperature comparison (Min, Current, Max)
     ax1 = axes[0, 0]
     temps = [metrics["temp_min"], metrics["temperature"], metrics["temp_max"]]
-    labels = ["Min\n(Today)", "Current", "Max\n(Today)"]
+    labels = ["Min", "Current", "Max"]
     colors = ["#3498db", "#e74c3c", "#e67e22"]
     bars = ax1.bar(labels, temps, color=colors, alpha=0.7)
     ax1.set_ylabel("Temperature (°C)")
@@ -484,21 +409,12 @@ def create_weather_visualization(metrics: dict, output_name: str) -> None:
             fontweight="bold",
         )
 
-    # ... (additional subplots for humidity/pressure, feels like, wind speed, UV index, and clouds/visibility)
+    # ... (additional subplot code for humidity, pressure, feels like, and wind speed)
 
     plt.tight_layout()
     plt.savefig(output_name, dpi=150, bbox_inches="tight")
     plt.close()
 ```
-
-The visualization includes six subplots:
-
-1. **Temperature** - Min, current, and max temperatures
-2. **Humidity & Pressure** - Dual-axis plot showing both metrics
-3. **Temperature Perception** - Actual vs. "feels like" temperature
-4. **Wind Speed** - Current wind conditions
-5. **UV Index** - Color-coded by intensity level (Low, Moderate, High, Very High, Extreme)
-6. **Clouds & Visibility** - Cloud coverage percentage and visibility distance
 
 Finally, the main plotting function:
 
@@ -706,16 +622,12 @@ your-bucket/
     └── weather_visualization.png
 ```
 
-The final visualization `weather_visualization.png` is a 2x3 grid showing:
+The final visualization `weather_visualization.png` shows:
 
-- **Temperature** - Min, current, and max temperatures for the day
-- **Humidity & Pressure** - Atmospheric conditions on dual axes
-- **Temperature Perception** - Actual vs. "feels like" temperature
-- **Wind Speed** - Current wind conditions
-- **UV Index** - Color-coded by intensity level (Low/Moderate/High/Very High/Extreme)
-- **Clouds & Visibility** - Cloud coverage percentage and visibility distance
-
-The One Call API 3.0 provides richer data than the basic current weather endpoint, including UV index, cloud coverage, and visibility metrics.
+- Temperature comparison (min, current, max)
+- Humidity and pressure
+- Actual vs. "feels like" temperature
+- Wind speed
 
 ## Troubleshooting
 
@@ -726,20 +638,12 @@ The One Call API 3.0 provides richer data than the basic current weather endpoin
    - Check that the secret is stored in the correct GitHub repository
    - Ensure the secret name is spelled correctly (case-sensitive)
 
-2. **"Unauthorized" or "401" API errors**
+2. **"Unauthorized" API errors**
    - Verify your OpenWeather API key is valid
    - Check that you haven't exceeded the free tier limits (1,000 calls/day)
    - Make sure the API key is correctly copied to GitHub secrets (no extra spaces)
-   - Ensure your API key has access to the One Call API 3.0 (requires "One Call by Call" subscription)
 
-3. **"No geocoding results found" error**
-   - Verify the city name is spelled correctly
-   - Try using the format "City,State,Country" for more specific results
-   - Check that the Geocoding API is accessible
-
-4. **Workflow fails during registration**
-   - Ensure your workflow JSON includes the `"Secrets"` field
-   - Verify that `"UseSecretStore": true` is set in your compute server configuration
+3. **Workflow fails during registration**
    - Check that you're using GitHub Actions as your compute server (secrets are only supported on GitHub Actions)
 
 ### Getting Help
@@ -756,12 +660,9 @@ If you encounter issues:
 In this tutorial, you learned how to:
 
 ✓ Use `faasr_secret()` to securely access API keys in your workflow functions
-✓ Reuse a single secret for multiple API calls (geocoding and weather data)
 ✓ Configure workflow secrets in the FaaSr Workflow Builder
 ✓ Store secrets in GitHub Actions for secure access
-✓ Fetch data from external APIs that require authentication (OpenWeather One Call API 3.0)
-✓ Convert city names to coordinates using the Geocoding API
-✓ Process comprehensive weather data from the One Call API 3.0
-✓ Create rich visualizations including UV index, cloud coverage, and visibility
+✓ Fetch data from external APIs that require authentication
+✓ Process and visualize API data
 
 The secrets management feature is essential for building real-world workflows that interact with external services, databases, and APIs. By following these patterns, you can securely access any credentials your workflows need without exposing sensitive information in your code.

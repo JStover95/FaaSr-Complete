@@ -27,25 +27,24 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
 
 def create_weather_visualization(metrics: dict, output_name: str) -> None:
     """
-    Create a visualization of the weather data from OpenWeather API 3.0.
+    Create a visualization of the weather data.
 
     Args:
         metrics: The processed weather metrics.
         output_name: The name of the output file to save the plot to.
     """
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     fig.suptitle(
-        f"Weather Data for {metrics['timezone']}\n"
-        f"{metrics['description'].title()} - "
-        f"Coordinates: ({metrics['lat']:.2f}, {metrics['lon']:.2f})",
+        f"Weather Data for {metrics['city']}, {metrics['country']}\n"
+        f"{metrics['description'].title()}",
         fontsize=16,
         fontweight="bold",
     )
 
-    # Temperature comparison (Min, Current, Max)
+    # Temperature comparison
     ax1 = axes[0, 0]
     temps = [metrics["temp_min"], metrics["temperature"], metrics["temp_max"]]
-    labels = ["Min\n(Today)", "Current", "Max\n(Today)"]
+    labels = ["Min", "Current", "Max"]
     colors = ["#3498db", "#e74c3c", "#e67e22"]
     bars = ax1.bar(labels, temps, color=colors, alpha=0.7)
     ax1.set_ylabel("Temperature (°C)")
@@ -86,7 +85,7 @@ def create_weather_visualization(metrics: dict, output_name: str) -> None:
                   ha="center", va="bottom", fontweight="bold")
 
     # Feels Like vs Actual Temperature
-    ax3 = axes[0, 2]
+    ax3 = axes[1, 0]
     categories = ["Actual", "Feels Like"]
     values = [metrics["temperature"], metrics["feels_like"]]
     colors_temp = ["#e74c3c", "#f39c12"]
@@ -107,7 +106,7 @@ def create_weather_visualization(metrics: dict, output_name: str) -> None:
         )
 
     # Wind Speed
-    ax4 = axes[1, 0]
+    ax4 = axes[1, 1]
     wind_categories = ["Wind Speed"]
     wind_values = [metrics["wind_speed"]]
     bars = ax4.bar(wind_categories, wind_values, color="#27ae60", alpha=0.7)
@@ -125,66 +124,6 @@ def create_weather_visualization(metrics: dict, output_name: str) -> None:
             va="bottom",
             fontweight="bold",
         )
-
-    # UV Index
-    ax5 = axes[1, 1]
-    uvi_value = metrics["uvi"]
-    
-    if uvi_value <= 2:
-        uvi_color = "#2ecc71"
-        uvi_level = "Low"
-    elif uvi_value <= 5:
-        uvi_color = "#f1c40f"
-        uvi_level = "Moderate"
-    elif uvi_value <= 7:
-        uvi_color = "#e67e22"
-        uvi_level = "High"
-    elif uvi_value <= 10:
-        uvi_color = "#e74c3c"
-        uvi_level = "Very High"
-    else:
-        uvi_color = "#9b59b6"
-        uvi_level = "Extreme"
-    
-    bars = ax5.bar(["UV Index"], [uvi_value], color=uvi_color, alpha=0.7)
-    ax5.set_ylabel("UV Index")
-    ax5.set_title(f"UV Index - {uvi_level}")
-    ax5.grid(True, alpha=0.3, axis="y")
-    ax5.set_ylim(0, max(12, uvi_value + 2))
-    
-    for bar in bars:
-        height = bar.get_height()
-        ax5.text(
-            bar.get_x() + bar.get_width() / 2.0,
-            height,
-            f"{uvi_value:.1f}",
-            ha="center",
-            va="bottom",
-            fontweight="bold",
-        )
-
-    # Cloud Coverage and Visibility
-    ax6 = axes[1, 2]
-    ax6_twin = ax6.twinx()
-    
-    x_pos = [0, 1]
-    clouds_bar = ax6.bar(x_pos[0], metrics["clouds"], color="#95a5a6", alpha=0.7, width=0.4)
-    visibility_km = metrics["visibility"] / 1000
-    visibility_bar = ax6_twin.bar(x_pos[1], visibility_km, color="#3498db", alpha=0.7, width=0.4)
-    
-    ax6.set_ylabel("Cloud Coverage (%)", color="#95a5a6")
-    ax6_twin.set_ylabel("Visibility (km)", color="#3498db")
-    ax6.set_title("Clouds & Visibility")
-    ax6.set_xticks(x_pos)
-    ax6.set_xticklabels(["Clouds", "Visibility"])
-    ax6.tick_params(axis="y", labelcolor="#95a5a6")
-    ax6_twin.tick_params(axis="y", labelcolor="#3498db")
-    ax6.set_ylim(0, 100)
-    
-    ax6.text(x_pos[0], metrics["clouds"], f"{metrics['clouds']}%", 
-             ha="center", va="bottom", fontweight="bold")
-    ax6_twin.text(x_pos[1], visibility_km, f"{visibility_km:.1f} km", 
-                  ha="center", va="bottom", fontweight="bold")
 
     plt.tight_layout()
     plt.savefig(output_name, dpi=150, bbox_inches="tight")
