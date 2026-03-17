@@ -1,6 +1,8 @@
 import json
+from datetime import datetime
 
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from FaaSr_py.client.py_client_stubs import faasr_get_file, faasr_log, faasr_put_file
 
 
@@ -27,103 +29,72 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
 
 def create_weather_visualization(metrics: dict, output_name: str) -> None:
     """
-    Create a visualization of the weather data.
+    Create a visualization of the 4-day hourly forecast data.
 
     Args:
-        metrics: The processed weather metrics.
+        metrics: The processed hourly forecast metrics.
         output_name: The name of the output file to save the plot to.
     """
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    datetime_objects = [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") for ts in metrics["timestamps"]]
+    
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     fig.suptitle(
-        f"Weather Data for {metrics['city']}, {metrics['country']}\n"
-        f"{metrics['description'].title()}",
+        f"4-Day Hourly Forecast for {metrics['city']}, {metrics['country']}\n"
+        f"({metrics['num_timestamps']} hourly timestamps)",
         fontsize=16,
         fontweight="bold",
     )
 
-    # Temperature comparison
+    # Temperature Forecast
     ax1 = axes[0, 0]
-    temps = [metrics["temp_min"], metrics["temperature"], metrics["temp_max"]]
-    labels = ["Min", "Current", "Max"]
-    colors = ["#3498db", "#e74c3c", "#e67e22"]
-    bars = ax1.bar(labels, temps, color=colors, alpha=0.7)
+    ax1.plot(datetime_objects, metrics["temperature"], 
+             color="#e74c3c", linewidth=2, label="Temperature", alpha=0.8)
+    ax1.plot(datetime_objects, metrics["feels_like"], 
+             color="#f39c12", linewidth=2, linestyle="--", label="Feels Like", alpha=0.6)
     ax1.set_ylabel("Temperature (°C)")
-    ax1.set_title("Temperature")
-    ax1.grid(True, alpha=0.3, axis="y")
-    
-    for bar, temp in zip(bars, temps):
-        height = bar.get_height()
-        ax1.text(
-            bar.get_x() + bar.get_width() / 2.0,
-            height,
-            f"{temp:.1f}°C",
-            ha="center",
-            va="bottom",
-            fontweight="bold",
-        )
+    ax1.set_title("Temperature Forecast")
+    ax1.legend(loc="best")
+    ax1.grid(True, alpha=0.3)
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d %H:%M"))
+    ax1.tick_params(axis="x", rotation=45)
 
-    # Humidity and Pressure
+    # Humidity Forecast
     ax2 = axes[0, 1]
-    ax2_twin = ax2.twinx()
-    
-    x_pos = [0, 1]
-    humidity_bar = ax2.bar(x_pos[0], metrics["humidity"], color="#16a085", alpha=0.7, width=0.4)
-    pressure_bar = ax2_twin.bar(x_pos[1], metrics["pressure"], color="#8e44ad", alpha=0.7, width=0.4)
-    
-    ax2.set_ylabel("Humidity (%)", color="#16a085")
-    ax2_twin.set_ylabel("Pressure (hPa)", color="#8e44ad")
-    ax2.set_title("Humidity & Pressure")
-    ax2.set_xticks(x_pos)
-    ax2.set_xticklabels(["Humidity", "Pressure"])
-    ax2.tick_params(axis="y", labelcolor="#16a085")
-    ax2_twin.tick_params(axis="y", labelcolor="#8e44ad")
+    ax2.fill_between(datetime_objects, metrics["humidity"], 
+                     color="#16a085", alpha=0.5, label="Humidity")
+    ax2.plot(datetime_objects, metrics["humidity"], 
+             color="#16a085", linewidth=2, alpha=0.8)
+    ax2.set_ylabel("Humidity (%)")
+    ax2.set_title("Humidity Forecast")
     ax2.set_ylim(0, 100)
-    
-    ax2.text(x_pos[0], metrics["humidity"], f"{metrics['humidity']}%", 
-             ha="center", va="bottom", fontweight="bold")
-    ax2_twin.text(x_pos[1], metrics["pressure"], f"{metrics['pressure']} hPa", 
-                  ha="center", va="bottom", fontweight="bold")
+    ax2.grid(True, alpha=0.3)
+    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d %H:%M"))
+    ax2.tick_params(axis="x", rotation=45)
 
-    # Feels Like vs Actual Temperature
+    # Precipitation Probability
     ax3 = axes[1, 0]
-    categories = ["Actual", "Feels Like"]
-    values = [metrics["temperature"], metrics["feels_like"]]
-    colors_temp = ["#e74c3c", "#f39c12"]
-    bars = ax3.bar(categories, values, color=colors_temp, alpha=0.7)
-    ax3.set_ylabel("Temperature (°C)")
-    ax3.set_title("Temperature Perception")
-    ax3.grid(True, alpha=0.3, axis="y")
-    
-    for bar, val in zip(bars, values):
-        height = bar.get_height()
-        ax3.text(
-            bar.get_x() + bar.get_width() / 2.0,
-            height,
-            f"{val:.1f}°C",
-            ha="center",
-            va="bottom",
-            fontweight="bold",
-        )
+    ax3.fill_between(datetime_objects, metrics["precipitation_probability"], 
+                     color="#3498db", alpha=0.5, label="Precipitation Prob.")
+    ax3.plot(datetime_objects, metrics["precipitation_probability"], 
+             color="#3498db", linewidth=2, alpha=0.8)
+    ax3.set_ylabel("Precipitation Probability (%)")
+    ax3.set_title("Precipitation Probability Forecast")
+    ax3.set_ylim(0, 100)
+    ax3.grid(True, alpha=0.3)
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d %H:%M"))
+    ax3.tick_params(axis="x", rotation=45)
 
-    # Wind Speed
+    # Wind Speed Forecast
     ax4 = axes[1, 1]
-    wind_categories = ["Wind Speed"]
-    wind_values = [metrics["wind_speed"]]
-    bars = ax4.bar(wind_categories, wind_values, color="#27ae60", alpha=0.7)
+    ax4.fill_between(datetime_objects, metrics["wind_speed"], 
+                     color="#27ae60", alpha=0.5, label="Wind Speed")
+    ax4.plot(datetime_objects, metrics["wind_speed"], 
+             color="#27ae60", linewidth=2, alpha=0.8)
     ax4.set_ylabel("Wind Speed (m/s)")
-    ax4.set_title("Wind Speed")
-    ax4.grid(True, alpha=0.3, axis="y")
-    
-    for bar, val in zip(bars, wind_values):
-        height = bar.get_height()
-        ax4.text(
-            bar.get_x() + bar.get_width() / 2.0,
-            height,
-            f"{val:.1f} m/s",
-            ha="center",
-            va="bottom",
-            fontweight="bold",
-        )
+    ax4.set_title("Wind Speed Forecast")
+    ax4.grid(True, alpha=0.3)
+    ax4.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d %H:%M"))
+    ax4.tick_params(axis="x", rotation=45)
 
     plt.tight_layout()
     plt.savefig(output_name, dpi=150, bbox_inches="tight")

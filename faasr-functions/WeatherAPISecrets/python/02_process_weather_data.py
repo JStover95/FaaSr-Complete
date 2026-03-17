@@ -26,26 +26,50 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
 
 def extract_weather_metrics(weather_data: dict) -> dict:
     """
-    Extract key weather metrics from the OpenWeather API response.
+    Extract hourly forecast metrics from the OpenWeather API response.
 
     Args:
-        weather_data: The raw weather data from OpenWeather API.
+        weather_data: The raw hourly forecast data from OpenWeather API.
 
     Returns:
-        A dictionary containing extracted metrics.
+        A dictionary containing extracted time-series metrics.
     """
+    city_info = weather_data.get("city", {})
+    forecast_list = weather_data.get("list", [])
+    
+    timestamps = []
+    temperatures = []
+    feels_like_temps = []
+    humidity_values = []
+    pressure_values = []
+    wind_speeds = []
+    precipitation_probs = []
+    descriptions = []
+    
+    for entry in forecast_list:
+        timestamps.append(entry.get("dt_txt", ""))
+        temperatures.append(entry.get("main", {}).get("temp", 0))
+        feels_like_temps.append(entry.get("main", {}).get("feels_like", 0))
+        humidity_values.append(entry.get("main", {}).get("humidity", 0))
+        pressure_values.append(entry.get("main", {}).get("pressure", 0))
+        wind_speeds.append(entry.get("wind", {}).get("speed", 0))
+        precipitation_probs.append(entry.get("pop", 0) * 100)
+        descriptions.append(entry.get("weather", [{}])[0].get("description", "N/A"))
+    
     metrics = {
-        "city": weather_data.get("name", "Unknown"),
-        "country": weather_data.get("sys", {}).get("country", "Unknown"),
-        "temperature": weather_data.get("main", {}).get("temp", 0),
-        "feels_like": weather_data.get("main", {}).get("feels_like", 0),
-        "temp_min": weather_data.get("main", {}).get("temp_min", 0),
-        "temp_max": weather_data.get("main", {}).get("temp_max", 0),
-        "humidity": weather_data.get("main", {}).get("humidity", 0),
-        "pressure": weather_data.get("main", {}).get("pressure", 0),
-        "wind_speed": weather_data.get("wind", {}).get("speed", 0),
-        "description": weather_data.get("weather", [{}])[0].get("description", "N/A"),
-        "icon": weather_data.get("weather", [{}])[0].get("icon", "01d"),
+        "city": city_info.get("name", "Unknown"),
+        "country": city_info.get("country", "Unknown"),
+        "lat": city_info.get("coord", {}).get("lat", 0),
+        "lon": city_info.get("coord", {}).get("lon", 0),
+        "timestamps": timestamps,
+        "temperature": temperatures,
+        "feels_like": feels_like_temps,
+        "humidity": humidity_values,
+        "pressure": pressure_values,
+        "wind_speed": wind_speeds,
+        "precipitation_probability": precipitation_probs,
+        "descriptions": descriptions,
+        "num_timestamps": len(timestamps),
     }
     
     return metrics
@@ -85,8 +109,8 @@ def process_weather_data(folder_name: str, input_name: str, output_name: str):
 
     # 2. Extract weather metrics
     metrics = extract_weather_metrics(weather_data)
-    faasr_log(f"Extracted metrics for {metrics['city']}, {metrics['country']}: "
-              f"{metrics['temperature']}°C, {metrics['description']}")
+    faasr_log(f"Extracted {metrics['num_timestamps']} hourly forecasts for "
+              f"{metrics['city']}, {metrics['country']}")
 
     # 3. Save the processed data
     save_processed_data(folder_name, output_name, metrics)

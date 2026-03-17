@@ -2,19 +2,20 @@ import requests
 from FaaSr_py.client.py_client_stubs import faasr_log, faasr_put_file, faasr_secret
 
 
-def build_url(city: str, api_key: str) -> str:
+def build_url(lat: str, lon: str, api_key: str) -> str:
     """
-    Build the URL for the OpenWeather API current weather endpoint.
+    Build the URL for the OpenWeather API hourly forecast endpoint.
 
     Args:
-        city: The name of the city to get weather data for.
+        lat: The latitude coordinate.
+        lon: The longitude coordinate.
         api_key: The OpenWeather API key.
 
     Returns:
-        The URL to fetch weather data from.
+        The URL to fetch hourly forecast data from.
     """
-    base_url = "https://api.openweathermap.org/data/2.5/weather"
-    return f"{base_url}?q={city}&appid={api_key}&units=metric"
+    base_url = "https://pro.openweathermap.org/data/2.5/forecast/hourly"
+    return f"{base_url}?lat={lat}&lon={lon}&appid={api_key}&units=metric"
 
 
 def fetch_weather_data(url: str, output_name: str) -> dict:
@@ -45,9 +46,9 @@ def fetch_weather_data(url: str, output_name: str) -> dict:
         raise e
 
 
-def get_weather_data(folder_name: str, output_name: str, city: str):
+def get_weather_data(folder_name: str, output_name: str, lat: str, lon: str, location_name: str):
     """
-    Fetch current weather data from OpenWeather API using a secret API key
+    Fetch 4-day hourly forecast data from OpenWeather API using a secret API key
     and upload it to an S3 bucket.
 
     This function demonstrates the use of faasr_secret() to securely retrieve
@@ -56,7 +57,9 @@ def get_weather_data(folder_name: str, output_name: str, city: str):
     Args:
         folder_name: The name of the folder to upload the data to.
         output_name: The name of the file to upload the data to.
-        city: The name of the city to get weather data for.
+        lat: The latitude coordinate.
+        lon: The longitude coordinate.
+        location_name: A descriptive name for the location (for logging).
     """
 
     # 1. Get the API key from the secret store using faasr_secret
@@ -65,13 +68,14 @@ def get_weather_data(folder_name: str, output_name: str, city: str):
     faasr_log("Successfully retrieved API key")
 
     # 2. Build the URL
-    url = build_url(city, api_key)
-    faasr_log(f"Fetching weather data for {city}")
+    url = build_url(lat, lon, api_key)
+    faasr_log(f"Fetching 4-day hourly forecast data for {location_name} (lat={lat}, lon={lon})")
 
     # 3. Fetch the weather data and save to local file
     weather_data = fetch_weather_data(url, output_name)
-    faasr_log(f"Fetched weather data: {weather_data.get('name', 'Unknown')}, "
-              f"Temp: {weather_data.get('main', {}).get('temp', 'N/A')}°C")
+    city_name = weather_data.get('city', {}).get('name', 'Unknown')
+    num_timestamps = len(weather_data.get('list', []))
+    faasr_log(f"Fetched hourly forecast data for {city_name}: {num_timestamps} timestamps")
 
     # 4. Upload the file to the S3 bucket
     faasr_put_file(
@@ -80,4 +84,4 @@ def get_weather_data(folder_name: str, output_name: str, city: str):
         remote_file=output_name,
     )
 
-    faasr_log(f"Uploaded weather data to {folder_name}/{output_name}")
+    faasr_log(f"Uploaded forecast data to {folder_name}/{output_name}")
