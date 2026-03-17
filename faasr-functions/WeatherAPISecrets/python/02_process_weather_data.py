@@ -26,10 +26,10 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
 
 def extract_weather_metrics(weather_data: dict) -> dict:
     """
-    Extract hourly forecast metrics from the OpenWeather API response.
+    Extract 5-day forecast metrics from the OpenWeather API response.
 
     Args:
-        weather_data: The raw hourly forecast data from OpenWeather API.
+        weather_data: The raw 5-day forecast data (3-hour intervals) from OpenWeather API.
 
     Returns:
         A dictionary containing extracted time-series metrics.
@@ -109,7 +109,7 @@ def process_weather_data(folder_name: str, input_name: str, output_name: str):
 
     # 2. Extract weather metrics
     metrics = extract_weather_metrics(weather_data)
-    faasr_log(f"Extracted {metrics['num_timestamps']} hourly forecasts for "
+    faasr_log(f"Extracted {metrics['num_timestamps']} forecast timestamps (3-hour intervals) for "
               f"{metrics['city']}, {metrics['country']}")
 
     # 3. Save the processed data

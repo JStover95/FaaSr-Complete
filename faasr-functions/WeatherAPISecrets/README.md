@@ -29,19 +29,19 @@
 - Using `faasr_secret()` to securely access API keys
 - Configuring workflow secrets in the FaaSr Workflow Builder
 - Storing secrets in GitHub Actions
-- Fetching hourly forecast data from external APIs
+- Fetching 5-day forecast data from external APIs
 - Processing time-series JSON data
 - Creating time-series visualizations
-- Working with 96 hourly timestamps
+- Working with 40 timestamps at 3-hour intervals
 
 ## Introduction
 
-The Weather API Secrets Workflow demonstrates how to use FaaSr's secrets management feature to securely access API keys and credentials in your workflows. This tutorial shows a common real-world scenario: fetching hourly forecast data from a third-party API (OpenWeather) that requires an API key, then processing and visualizing that data.
+The Weather API Secrets Workflow demonstrates how to use FaaSr's secrets management feature to securely access API keys and credentials in your workflows. This tutorial shows a common real-world scenario: fetching 5-day forecast data from a third-party API (OpenWeather) that requires an API key, then processing and visualizing that data.
 
 ```mermaid
 flowchart LR
-  01["Get Weather Data<br/>(4-day hourly forecast<br/>using secret API key)"]
-  02["Process Weather Data<br/>(96 hourly timestamps)"]
+  01["Get Weather Data<br/>(5-day forecast<br/>using secret API key)"]
+  02["Process Weather Data<br/>(40 timestamps @ 3hr intervals)"]
   03["Plot Weather Data<br/>(time-series visualization)"]
 
   01 --> 02
@@ -51,7 +51,7 @@ flowchart LR
 This workflow demonstrates:
 
 - Securely retrieving API keys using `faasr_secret()`
-- Fetching 4-day hourly forecast data from OpenWeather API (96 timestamps)
+- Fetching 5-day forecast data from OpenWeather API (40 timestamps at 3-hour intervals)
 - Processing time-series JSON data
 - Creating time-series visualizations with matplotlib
 
@@ -95,18 +95,22 @@ When you register your workflow, FaaSr automatically injects the secrets from yo
 
 ## Getting an OpenWeather API Key
 
-To use this workflow, you'll need an API key from OpenWeather with access to the Hourly Forecast API:
+To use this workflow, you'll need a free API key from OpenWeather:
 
 1. Visit [https://openweathermap.org/api](https://openweathermap.org/api)
-2. Click "Sign Up" to create an account
-3. Subscribe to a plan that includes the "Hourly Forecast" API (this requires a paid subscription)
-4. After signing in, navigate to **API Keys** ([https://home.openweathermap.org/api_keys](https://home.openweathermap.org/api_keys))
-5. Copy your API key (or generate a new one)
-6. Keep this key handy - you'll need it when setting up GitHub secrets
+2. Click "Sign Up" to create a free account
+3. After signing in, navigate to **API Keys** ([https://home.openweathermap.org/api_keys](https://home.openweathermap.org/api_keys))
+4. Copy your default API key (or generate a new one)
+5. Keep this key handy - you'll need it when setting up GitHub secrets
 
-**Important:** The Hourly Forecast API (`forecast/hourly`) is part of the Professional Collections and requires a paid subscription. The free tier only includes current weather and 5-day/3-hour forecast. For more details, see [https://openweathermap.org/price](https://openweathermap.org/price).
+The free tier includes:
 
-Alternatively, if you want to use the free tier, you can modify this workflow to use the 5-day/3-hour forecast API (`forecast`) instead by changing the endpoint in the code.
+- 1,000 API calls per day
+- Current weather data
+- **5-day forecast with 3-hour intervals** (used in this tutorial)
+- Historical data for 5 days
+
+This workflow uses the 5-day forecast API, which provides weather data at 3-hour intervals (40 timestamps total) and is available with the free tier.
 
 ## Writing our Functions
 
@@ -121,12 +125,12 @@ import requests
 from FaaSr_py.client.py_client_stubs import faasr_log, faasr_put_file, faasr_secret
 ```
 
-Next, we write a helper function to build the OpenWeather API URL for the hourly forecast endpoint:
+Next, we write a helper function to build the OpenWeather API URL for the 5-day forecast endpoint:
 
 ```python
 def build_url(lat: str, lon: str, api_key: str) -> str:
     """
-    Build the URL for the OpenWeather API hourly forecast endpoint.
+    Build the URL for the OpenWeather API 5-day forecast endpoint.
 
     Args:
         lat: The latitude coordinate.
@@ -134,9 +138,9 @@ def build_url(lat: str, lon: str, api_key: str) -> str:
         api_key: The OpenWeather API key.
 
     Returns:
-        The URL to fetch hourly forecast data from.
+        The URL to fetch 5-day forecast data (3-hour intervals) from.
     """
-    base_url = "https://pro.openweathermap.org/data/2.5/forecast/hourly"
+    base_url = "https://api.openweathermap.org/data/2.5/forecast"
     return f"{base_url}?lat={lat}&lon={lon}&appid={api_key}&units=metric"
 ```
 
@@ -176,7 +180,7 @@ Now for the main function that demonstrates using `faasr_secret()`:
 ```python
 def get_weather_data(folder_name: str, output_name: str, lat: str, lon: str, location_name: str):
     """
-    Fetch 4-day hourly forecast data from OpenWeather API using a secret API key
+    Fetch 5-day forecast data (3-hour intervals) from OpenWeather API using a secret API key
     and upload it to an S3 bucket.
 
     This function demonstrates the use of faasr_secret() to securely retrieve
@@ -197,13 +201,13 @@ def get_weather_data(folder_name: str, output_name: str, lat: str, lon: str, loc
 
     # 2. Build the URL
     url = build_url(lat, lon, api_key)
-    faasr_log(f"Fetching 4-day hourly forecast data for {location_name} (lat={lat}, lon={lon})")
+    faasr_log(f"Fetching 5-day forecast data (3-hour intervals) for {location_name} (lat={lat}, lon={lon})")
 
     # 3. Fetch the weather data and save to local file
     weather_data = fetch_weather_data(url, output_name)
     city_name = weather_data.get('city', {}).get('name', 'Unknown')
     num_timestamps = len(weather_data.get('list', []))
-    faasr_log(f"Fetched hourly forecast data for {city_name}: {num_timestamps} timestamps")
+    faasr_log(f"Fetched forecast data for {city_name}: {num_timestamps} timestamps (3-hour intervals)")
 
     # 4. Upload the file to the S3 bucket
     faasr_put_file(
@@ -221,12 +225,13 @@ def get_weather_data(folder_name: str, output_name: str, lat: str, lon: str, loc
 - The secret name must exactly match what you configure in your workflow and GitHub
 - The function returns the secret value as a string
 - If the secret doesn't exist or can't be accessed, `faasr_secret()` will raise an error
-- The hourly forecast API uses geographic coordinates (lat/lon) instead of city names
-- The API returns up to 96 hourly timestamps (4 days)
+- The 5-day forecast API uses geographic coordinates (lat/lon) for precision
+- The API returns up to 40 timestamps (5 days at 3-hour intervals)
+- This API is available with the free tier
 
 ### 2. Process Weather Data
 
-The second function processes the hourly forecast data from OpenWeather API. The complete function can be found in [02_process_weather_data.py](./python/02_process_weather_data.py).
+The second function processes the 5-day forecast data from OpenWeather API. The complete function can be found in [02_process_weather_data.py](./python/02_process_weather_data.py).
 
 First, our imports:
 
@@ -260,15 +265,15 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
         return json.load(f)
 ```
 
-Next, we extract time-series metrics from the 96 hourly timestamps. The OpenWeather hourly forecast API returns a `list` array containing forecast data for each hour:
+Next, we extract time-series metrics from the 40 forecast timestamps. The OpenWeather 5-day forecast API returns a `list` array containing forecast data at 3-hour intervals:
 
 ```python
 def extract_weather_metrics(weather_data: dict) -> dict:
     """
-    Extract hourly forecast metrics from the OpenWeather API response.
+    Extract 5-day forecast metrics from the OpenWeather API response.
 
     Args:
-        weather_data: The raw hourly forecast data from OpenWeather API.
+        weather_data: The raw 5-day forecast data (3-hour intervals) from OpenWeather API.
 
     Returns:
         A dictionary containing extracted time-series metrics.
@@ -354,7 +359,7 @@ def process_weather_data(folder_name: str, input_name: str, output_name: str):
 
     # 2. Extract weather metrics
     metrics = extract_weather_metrics(weather_data)
-    faasr_log(f"Extracted {metrics['num_timestamps']} hourly forecasts for "
+    faasr_log(f"Extracted {metrics['num_timestamps']} forecast timestamps (3-hour intervals) for "
               f"{metrics['city']}, {metrics['country']}")
 
     # 3. Save the processed data
@@ -364,13 +369,13 @@ def process_weather_data(folder_name: str, input_name: str, output_name: str):
 
 **Key Points:**
 
-- The hourly forecast API returns a `list` array with up to 96 hourly forecasts
+- The 5-day forecast API returns a `list` array with up to 40 forecast timestamps (3-hour intervals)
 - We extract time-series data (arrays) for each metric across all timestamps
 - The `pop` field represents probability of precipitation (0-1), which we convert to percentage
 
 ### 3. Plot Weather Data
 
-The third function creates a time-series visualization of the hourly forecast data. The complete function can be found in [03_plot_weather_data.py](./python/03_plot_weather_data.py).
+The third function creates a time-series visualization of the 5-day forecast data. The complete function can be found in [03_plot_weather_data.py](./python/03_plot_weather_data.py).
 
 First, our imports including matplotlib and datetime utilities:
 
@@ -407,23 +412,23 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
         return json.load(f)
 ```
 
-The visualization function creates a 2x2 grid of time-series plots showing the hourly forecast data:
+The visualization function creates a 2x2 grid of time-series plots showing the forecast data:
 
 ```python
 def create_weather_visualization(metrics: dict, output_name: str) -> None:
     """
-    Create a visualization of the 4-day hourly forecast data.
+    Create a visualization of the 5-day forecast data (3-hour intervals).
 
     Args:
-        metrics: The processed hourly forecast metrics.
+        metrics: The processed forecast metrics.
         output_name: The name of the output file to save the plot to.
     """
     datetime_objects = [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") for ts in metrics["timestamps"]]
     
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     fig.suptitle(
-        f"4-Day Hourly Forecast for {metrics['city']}, {metrics['country']}\n"
-        f"({metrics['num_timestamps']} hourly timestamps)",
+        f"5-Day Forecast for {metrics['city']}, {metrics['country']}\n"
+        f"({metrics['num_timestamps']} timestamps at 3-hour intervals)",
         fontsize=16,
         fontweight="bold",
     )
@@ -517,8 +522,9 @@ def plot_weather_data(folder_name: str, input_name: str, output_name: str):
 
 - The visualization shows time-series data with dates on the x-axis
 - We use `matplotlib.dates` to format datetime labels
-- Each subplot shows a different forecast metric over the 4-day period
+- Each subplot shows a different forecast metric over the 5-day period
 - The fill_between creates shaded areas under the curves for better readability
+- Data points are at 3-hour intervals (00:00, 03:00, 06:00, etc.)
 
 ## Building our Workflow
 
@@ -703,34 +709,10 @@ your-bucket/
 
 The final visualization `weather_visualization.png` shows four time-series plots:
 
-- Temperature forecast (actual and "feels like" over 4 days)
-- Humidity forecast (hourly humidity percentage)
-- Precipitation probability (chance of rain/snow each hour)
-- Wind speed forecast (hourly wind speed in m/s)
-
-## Using the Free API Alternative
-
-If you don't have access to the Hourly Forecast API (paid tier), you can modify this workflow to use the free 5-day/3-hour forecast API:
-
-1. In `01_get_weather_data.py`, change the base URL:
-
-   ```python
-   base_url = "https://api.openweathermap.org/data/2.5/forecast"
-   ```
-
-2. Update the function signature to use city name instead of lat/lon:
-
-   ```python
-   def build_url(city: str, api_key: str) -> str:
-       base_url = "https://api.openweathermap.org/data/2.5/forecast"
-       return f"{base_url}?q={city}&appid={api_key}&units=metric"
-   ```
-
-3. Update the workflow JSON arguments to use `city` instead of `lat`, `lon`, and `location_name`
-
-4. Adjust `03_plot_weather_data.py` to handle 40 timestamps (5 days × 8 per day) instead of 96
-
-The `faasr_secret()` API usage remains exactly the same!
+- Temperature forecast (actual and "feels like" over 5 days at 3-hour intervals)
+- Humidity forecast (humidity percentage at 3-hour intervals)
+- Precipitation probability (chance of rain/snow at 3-hour intervals)
+- Wind speed forecast (wind speed in m/s at 3-hour intervals)
 
 ## Troubleshooting
 
@@ -743,15 +725,11 @@ The `faasr_secret()` API usage remains exactly the same!
 
 2. **"Unauthorized" API errors**
    - Verify your OpenWeather API key is valid
-   - If using the hourly forecast API, ensure your subscription includes it
-   - Check that you haven't exceeded API rate limits
+   - Check that you haven't exceeded API rate limits (1,000 calls/day for free tier)
    - Make sure the API key is correctly copied to GitHub secrets (no extra spaces)
+   - Ensure your API key is activated (new keys may take a few hours to activate)
 
-3. **"404 Not Found" API errors**
-   - This usually means the hourly forecast API is not available with your API key
-   - Either upgrade to a paid plan or use the free 5-day/3-hour forecast API (see above)
-
-4. **Workflow fails during registration**
+3. **Workflow fails during registration**
    - Ensure your workflow JSON includes the `"Secrets"` field
    - Verify that `"UseSecretStore": true` is set in your compute server configuration
    - Check that you're using GitHub Actions as your compute server (secrets are only supported on GitHub Actions)
@@ -772,9 +750,9 @@ In this tutorial, you learned how to:
 ✓ Use `faasr_secret()` to securely access API keys in your workflow functions
 ✓ Configure workflow secrets in the FaaSr Workflow Builder
 ✓ Store secrets in GitHub Actions for secure access
-✓ Fetch hourly forecast data from external APIs that require authentication
+✓ Fetch 5-day forecast data from external APIs that require authentication
 ✓ Process time-series JSON data from API responses
 ✓ Create time-series visualizations with matplotlib
-✓ Handle 96 hourly timestamps across a 4-day forecast period
+✓ Handle 40 forecast timestamps at 3-hour intervals
 
 The secrets management feature is essential for building real-world workflows that interact with external services, databases, and APIs. By following these patterns, you can securely access any credentials your workflows need without exposing sensitive information in your code.

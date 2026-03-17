@@ -29,18 +29,18 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
 
 def create_weather_visualization(metrics: dict, output_name: str) -> None:
     """
-    Create a visualization of the 4-day hourly forecast data.
+    Create a visualization of the 5-day forecast data (3-hour intervals).
 
     Args:
-        metrics: The processed hourly forecast metrics.
+        metrics: The processed forecast metrics.
         output_name: The name of the output file to save the plot to.
     """
     datetime_objects = [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") for ts in metrics["timestamps"]]
     
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     fig.suptitle(
-        f"4-Day Hourly Forecast for {metrics['city']}, {metrics['country']}\n"
-        f"({metrics['num_timestamps']} hourly timestamps)",
+        f"5-Day Forecast for {metrics['city']}, {metrics['country']}\n"
+        f"({metrics['num_timestamps']} timestamps at 3-hour intervals)",
         fontsize=16,
         fontweight="bold",
     )
