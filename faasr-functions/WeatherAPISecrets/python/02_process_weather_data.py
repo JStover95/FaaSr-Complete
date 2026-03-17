@@ -26,33 +26,26 @@ def get_input_data(folder_name: str, input_name: str) -> dict:
 
 def extract_weather_metrics(weather_data: dict) -> dict:
     """
-    Extract key weather metrics from the OpenWeather API 3.0 response.
+    Extract key weather metrics from the OpenWeather API response.
 
     Args:
-        weather_data: The raw weather data from OpenWeather API 3.0.
+        weather_data: The raw weather data from OpenWeather API.
 
     Returns:
         A dictionary containing extracted metrics.
     """
-    current = weather_data.get("current", {})
-    daily = weather_data.get("daily", [{}])[0] if weather_data.get("daily") else {}
-    
     metrics = {
-        "lat": weather_data.get("lat", 0),
-        "lon": weather_data.get("lon", 0),
-        "timezone": weather_data.get("timezone", "Unknown"),
-        "temperature": current.get("temp", 0),
-        "feels_like": current.get("feels_like", 0),
-        "temp_min": daily.get("temp", {}).get("min", 0),
-        "temp_max": daily.get("temp", {}).get("max", 0),
-        "humidity": current.get("humidity", 0),
-        "pressure": current.get("pressure", 0),
-        "wind_speed": current.get("wind_speed", 0),
-        "uvi": current.get("uvi", 0),
-        "clouds": current.get("clouds", 0),
-        "visibility": current.get("visibility", 0),
-        "description": current.get("weather", [{}])[0].get("description", "N/A"),
-        "icon": current.get("weather", [{}])[0].get("icon", "01d"),
+        "city": weather_data.get("name", "Unknown"),
+        "country": weather_data.get("sys", {}).get("country", "Unknown"),
+        "temperature": weather_data.get("main", {}).get("temp", 0),
+        "feels_like": weather_data.get("main", {}).get("feels_like", 0),
+        "temp_min": weather_data.get("main", {}).get("temp_min", 0),
+        "temp_max": weather_data.get("main", {}).get("temp_max", 0),
+        "humidity": weather_data.get("main", {}).get("humidity", 0),
+        "pressure": weather_data.get("main", {}).get("pressure", 0),
+        "wind_speed": weather_data.get("wind", {}).get("speed", 0),
+        "description": weather_data.get("weather", [{}])[0].get("description", "N/A"),
+        "icon": weather_data.get("weather", [{}])[0].get("icon", "01d"),
     }
     
     return metrics
