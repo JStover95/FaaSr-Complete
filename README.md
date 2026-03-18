@@ -1,12 +1,20 @@
 # FaaSr Framework - Repository Coordination Overview
 
-This document provides a high-level overview of how the three core FaaSr repositories coordinate to enable serverless Function-as-a-Service (FaaS) workflows across multiple cloud platforms.
+This document provides a high-level overview of how the four core FaaSr repositories coordinate to enable serverless Function-as-a-Service (FaaS) workflows across multiple cloud platforms.
+
+**Getting Started:** Most users should begin with the [FaaSr Workflow Builder GUI](https://faasr.io/FaaSr-workflow-builder/), a visual drag-and-drop interface for creating workflow configurations without writing JSON manually.
 
 ## Repository Architecture
 
-The FaaSr framework consists of three interdependent repositories:
+The FaaSr framework consists of four interdependent repositories:
 
 ```plaintext
+┌──────────────────────────┐
+│  faasr-workflow-builder  │  Visual workflow editor (GUI)
+│  (React Web App)         │  • Drag-and-drop DAG builder
+└───────────┬──────────────┘  • JSON schema validation
+            │ exports            • GitHub Pages deployment
+            ▼
 ┌─────────────────────┐
 │  faasr-workflow     │  User-facing workflow management
 │  (GitHub Actions)   │  • Workflow JSON schemas
@@ -22,6 +30,170 @@ The FaaSr framework consists of three interdependent repositories:
 │   • Platform images │           │   • Validation      │
 │   • Entry points    │           │   • S3 API          │
 └─────────────────────┘           └─────────────────────┘
+```
+
+## 0. faasr-workflow-builder: Visual Workflow Editor
+
+**Purpose:** Web-based GUI for creating and editing FaaSr workflow JSON files
+
+### Key Features
+
+- **Visual DAG Editor**: Drag-and-drop interface using ReactFlow for building workflow graphs
+- **Four Editor Panels**:
+  - **Functions/Actions**: Define workflow actions with language (Python/R), function names, arguments, dependencies, and packages
+  - **Compute Servers**: Configure cloud platforms (GitHub Actions, AWS Lambda, GCP Cloud Run, OpenWhisk, Slurm)
+  - **Data Stores**: Set up S3-compatible storage endpoints for data persistence
+  - **Workflow Settings**: Configure workflow name, entry point, invocation ID type, secrets, and logging
+- **Automatic Layout**: Vertical and horizontal graph layouts using Dagre algorithm
+- **JSON Import/Export**: Upload existing workflow JSON or download newly created workflows
+- **Schema Validation**: Real-time validation against FaaSr workflow JSON schema using Ajv
+- **Dark/Light Mode**: Toggle between color themes
+- **Undo/Redo**: Full history tracking for all workflow modifications
+
+### Technology Stack
+
+```json
+{
+  "framework": "React 19.x",
+  "graph_visualization": "@xyflow/react",
+  "layout_engine": "@dagrejs/dagre",
+  "validation": "ajv",
+  "deployment": "GitHub Pages",
+  "hosted_url": "https://faasr.io/FaaSr-workflow-builder/"
+}
+```
+
+### Component Architecture
+
+```plaintext
+App.js (Main workflow canvas)
+  ├── Toolbar.jsx
+  │   ├── UploadWorkflow (Import JSON)
+  │   ├── UploadLayout (Import layout)
+  │   └── Download (Export validated JSON)
+  │
+  ├── EditorPanel.jsx
+  │   ├── FunctionsPanel (Edit actions)
+  │   ├── ComputeServersPanel (Edit servers)
+  │   ├── DataStoresPanel (Edit S3 storage)
+  │   └── WorkflowSettings (Global settings)
+  │
+  └── ReactFlow Canvas
+      ├── FunctionNode (Visual DAG nodes)
+      ├── Controls (Zoom, pan)
+      └── Background (Optional grid dots)
+```
+
+### Workflow Builder Features
+
+#### 1. Function/Action Editor
+
+- **Language Selection**: Python or R
+- **Function Configuration**:
+  - Function name (entry point in user code)
+  - GitHub repository path to function code
+  - Compute server assignment
+  - Container image specification
+- **Dependencies**:
+  - Python: PyPI package editor with version pinning
+  - R: CRAN package editor + GitHub package support
+- **Action Connections**: Visual drag-and-drop to define DAG edges
+- **Conditional Branching**: Support for True/False successor actions
+- **Ranked Actions**: Parallel execution configuration
+
+#### 2. Compute Server Editor
+
+- Platform-specific configuration for:
+  - **GitHub Actions**: GitHub API endpoint
+  - **AWS Lambda**: Region, role, timeout, memory
+  - **Google Cloud Run**: Region, timeout, memory
+  - **OpenWhisk**: API host, namespace
+  - **Slurm**: Cluster endpoint configuration
+- Default container assignment per platform
+
+#### 3. Data Store Editor
+
+- S3-compatible storage configuration:
+  - Endpoint URL
+  - Region
+  - Bucket name
+  - Access credentials (references to secrets)
+  - Read/Write permissions
+
+#### 4. Workflow Settings
+
+- **Workflow Name**: Unique identifier
+- **Entry Point**: Select which action starts execution
+- **Invocation ID**: UUID, timestamp, or custom format
+- **Secrets List**: Define required secret names (populated from GitHub secrets)
+- **Logging**: Configure log file names and data store
+
+### User Workflow with GUI
+
+```plaintext
+1. Access Web App
+   → https://faasr.io/FaaSr-workflow-builder/
+
+2. Create/Upload Workflow
+   → Import existing JSON or start from scratch
+
+3. Configure Components (using left panel)
+   ├── Add Compute Servers (cloud platforms)
+   ├── Add Data Stores (S3 buckets)
+   ├── Create Functions/Actions
+   └── Set Workflow Properties
+
+4. Build DAG (using visual canvas)
+   ├── Drag nodes to position
+   ├── Connect nodes to define dependencies
+   └── Use auto-layout for clean visualization
+
+5. Validate & Download
+   ├── Schema validation before export
+   ├── Download {WorkflowName}.json
+   └── Optional: Download layout for later editing
+
+6. Deploy to faasr-workflow
+   → Commit JSON to workflow repository
+```
+
+### Development & Deployment
+
+- **Local Development**: `npm start` (runs on `http://localhost:3000`)
+- **Build**: `npm run build` (creates production bundle)
+- **Deployment**: Automated via GitHub Actions
+  - Trigger: Push to `main` branch
+  - Process: `npm ci` → `npm run build` → deploy to `gh-pages` branch
+  - Live URL: `https://faasr.io/FaaSr-workflow-builder/`
+
+### Schema Validation
+
+The GUI validates against `webui-workflow-schema-webui-version.json`:
+
+- Required fields enforcement
+- Type checking for all properties
+- Cross-reference validation (e.g., `FunctionInvoke` must exist in `ActionList`)
+- Minimum action count validation
+- Container-to-action mapping verification
+
+### Default Containers
+
+Automatically assigns platform-appropriate containers from `default-containers.json`:
+
+```json
+{
+  "Python": {
+    "GitHubActions": "ghcr.io/faasr/github-actions-python:2.1.0",
+    "Lambda": "{account}.dkr.ecr.{region}.amazonaws.com/aws-lambda-python:2.1.0",
+    "GoogleCloudRun": "faasr/gcp-python:2.1.0",
+    "OpenWhisk": "faasr/openwhisk-python:2.1.0",
+    "Slurm": "faasr/slurm-python:2.1.0"
+  },
+  "R": {
+    "GitHubActions": "ghcr.io/faasr/github-actions-rocker:2.1.0",
+    ...
+  }
+}
 ```
 
 ## 1. faasr-workflow: Workflow Management Repository
@@ -41,7 +213,10 @@ The FaaSr framework consists of three interdependent repositories:
 
 ### Workflow Lifecycle
 
-1. **Design**: User creates workflow JSON using [FaaSr Workflow Builder](https://faasr.io/FaaSr-workflow-builder/)
+1. **Design**: User creates workflow JSON using the visual [FaaSr Workflow Builder](https://faasr.io/FaaSr-workflow-builder/) GUI
+   - Build DAG visually with drag-and-drop nodes
+   - Configure functions, compute servers, and data stores
+   - Validate and download workflow JSON
 2. **Upload**: JSON file committed to this repository
 3. **Register**: `FAASR REGISTER` action creates/updates functions on cloud platforms
 4. **Invoke**: `FAASR INVOKE` action triggers the workflow entry point
@@ -218,6 +393,8 @@ All platform images use `faasr_entry.py` as the execution entry point:
 ### Container Usage Flow
 
 ```plaintext
+FaaSr Workflow Builder GUI
+      ↓ (user selects container or uses defaults)
 User Workflow JSON
       ↓
 Specifies container image per action
@@ -237,7 +414,7 @@ Action executes
 
 ### 1. Version Coordination
 
-**Critical:** All three repos must use compatible versions
+**Critical:** All four repos must use compatible versions
 
 ```yaml
 faasr-docker (builds):
@@ -248,6 +425,12 @@ faasr-docker (builds):
 faasr-workflow (registers):
   register-workflow.yml
     └── pip install FaaSr_py==2.1.0
+
+faasr-workflow-builder (references):
+  default-containers.json
+    └── "ghcr.io/faasr/github-actions-python:2.1.0"
+    └── "faasr/gcp-python:2.1.0"
+    └── ...
 
 faasr-backend (publishes):
   setup.py: version="2.1.0"
@@ -260,11 +443,13 @@ faasr-backend (publishes):
 3. Rebuild base images in `faasr-docker` pointing to new tag
 4. Rebuild platform images from new base images
 5. Update `faasr-workflow` GitHub Actions to install new version
-6. Update default image references in workflow JSON schemas
+6. Update `faasr-workflow-builder/src/assets/default-containers.json` with new image tags
+7. Redeploy workflow builder to GitHub Pages
+8. Update default image references in workflow JSON schemas
 
 ### 2. Payload Format (JSON Schema)
 
-All repos depend on consistent workflow JSON structure:
+All repos depend on consistent workflow JSON structure (typically generated by the workflow builder GUI):
 
 ```json
 {
@@ -290,6 +475,7 @@ All repos depend on consistent workflow JSON structure:
 
 **Shared by:**
 
+- `faasr-workflow-builder`: Generates and validates with Ajv schema validator
 - `faasr-workflow`: Stores and passes to registration/invocation
 - `faasr-backend`: Validates with `FaaSrPayload` class
 - `faasr-docker`: `faasr_entry.py` parses and uses
@@ -353,7 +539,8 @@ User function code
 4. **faasr-docker**: Rebuild base images with new backend version
 5. **faasr-docker**: Rebuild all platform images
 6. **faasr-workflow**: Update `pip install FaaSr_py==X.Y.Z` in actions
-7. **Documentation**: Update API docs with new function
+7. **faasr-workflow-builder**: Update container versions if affected
+8. **Documentation**: Update API docs and workflow builder tooltips with new function
 
 ### Scenario 2: Supporting a New Cloud Platform
 
@@ -363,9 +550,13 @@ User function code
 4. **faasr-docker**: Create new `{platform}.Dockerfile`
 5. **faasr-docker**: Add GitHub Action to build and publish
 6. **faasr-docker**: Update `faasr_entry.py` platform detection
-7. **faasr-workflow**: Add `{PLATFORM}_Credentials` secrets
-8. **faasr-workflow**: Update `register-workflow.yml` and `invoke-workflow.yml`
-9. **faasr-workflow**: Add registration/invocation scripts for platform
+7. **faasr-workflow-builder**: Add platform to `ComputeServerEditor` component
+8. **faasr-workflow-builder**: Add platform logo asset
+9. **faasr-workflow-builder**: Update `default-containers.json` with new platform containers
+10. **faasr-workflow-builder**: Update schema to include new platform type
+11. **faasr-workflow**: Add `{PLATFORM}_Credentials` secrets
+12. **faasr-workflow**: Update `register-workflow.yml` and `invoke-workflow.yml`
+13. **faasr-workflow**: Add registration/invocation scripts for platform
 
 ### Scenario 3: Changing Workflow JSON Schema
 
@@ -373,9 +564,12 @@ User function code
 2. **faasr-backend**: Update `Executor` and `Scheduler` if needed
 3. **faasr-backend**: Version bump and release
 4. **faasr-docker**: Rebuild containers (if entry point logic changes)
-5. **faasr-workflow**: Update example JSON files
-6. **Documentation**: Update workflow builder and schema docs
-7. **Workflow Builder UI**: Update to generate new schema format
+5. **faasr-workflow-builder**: Update `webui-workflow-schema-webui-version.json`
+6. **faasr-workflow-builder**: Update React components to support new schema fields
+7. **faasr-workflow-builder**: Update default containers JSON if needed
+8. **faasr-workflow-builder**: Rebuild and redeploy to GitHub Pages
+9. **faasr-workflow**: Update example JSON files
+10. **Documentation**: Update workflow builder and schema docs
 
 ### Scenario 4: Adding Dependencies to Containers
 
@@ -384,11 +578,27 @@ User function code
 3. **faasr-docker**: Rebuild all platform images from new base
 4. **Documentation**: Document new available packages
 
+### Scenario 5: Adding New Workflow Builder Features
+
+1. **faasr-workflow-builder**: Create/update React components in `src/components/`
+2. **faasr-workflow-builder**: Update context provider (`WorkflowContext.js`) if needed
+3. **faasr-workflow-builder**: Add validation logic to schema
+4. **faasr-workflow-builder**: Test locally with `npm start`
+5. **faasr-workflow-builder**: Update default values in assets if needed
+6. **faasr-workflow-builder**: Deploy via push to main (auto-deploys to GitHub Pages)
+7. **Documentation**: Update tutorial and examples
+
 ## Testing Changes
 
 ### Local Testing
 
 ```bash
+# Test workflow builder UI changes
+cd faasr-workflow-builder
+npm install
+npm start  # Opens http://localhost:3000
+npm test   # Run test suite
+
 # Test backend changes
 cd faasr-backend
 pip install -e .
@@ -407,15 +617,29 @@ python scripts/register_workflow.py --workflow-file tutorial.json
 
 ### Integration Testing
 
-1. Fork `faasr-workflow` repository
-2. Add test workflow JSON
-3. Build custom containers pointing to development backend branches
-4. Register and invoke test workflows
-5. Verify logs in S3
+1. Test workflow creation in GUI:
+   - Create workflow in `faasr-workflow-builder`
+   - Validate schema compliance
+   - Export and verify JSON structure
+2. Fork `faasr-workflow` repository
+3. Upload workflow JSON from builder
+4. Build custom containers pointing to development backend branches
+5. Register and invoke test workflows
+6. Verify logs in S3
 
 ## Dependency Graph
 
 ```plaintext
+User (Web Browser)
+      ↓
+┌──────────────────────────┐
+│ faasr-workflow-builder   │
+│ (React Web App)          │
+│ • Visual DAG editor      │
+│ • Schema validation      │
+└──────┬───────────────────┘
+       │ exports JSON
+       ↓
 User Workflow JSON File
       ↓
 ┌─────────────────────┐
@@ -449,30 +673,52 @@ Successor Actions Invoked
 
 ## Key Takeaways for Developers
 
-1. **Backend Changes = Container Rebuilds**: Any change to `faasr-backend` requires rebuilding all Docker images
+1. **Workflow Builder is Entry Point**: Users create workflows visually in the GUI before deployment
 
-2. **Version Synchronization**: Always keep versions aligned:
+2. **Backend Changes = Container Rebuilds**: Any change to `faasr-backend` requires rebuilding all Docker images
+
+3. **Version Synchronization**: Always keep versions aligned:
    - Backend package version
    - Docker build arguments
    - Workflow GitHub Actions `pip install` statements
+   - Default container references in workflow builder
 
-3. **JSON Schema is Contract**: Changes to workflow JSON affect all three repos
+4. **JSON Schema is Contract**: Changes to workflow JSON affect all four repos:
+   - `faasr-workflow-builder`: Schema validation and UI components
+   - `faasr-workflow`: Example JSON files
+   - `faasr-backend`: Payload validation
+   - `faasr-docker`: Entry point parsing (if structure changes)
 
-4. **Platform-Specific Logic**:
+5. **Platform-Specific Logic**:
    - Registration: `faasr-workflow/scripts/register_workflow.py`
    - Secret retrieval: `faasr-docker/faas_specific/faasr_entry.py`
    - Invocation: `faasr-backend/FaaSr_py/server/faasr_server.py`
 
-5. **Entry Point is Critical**: `faasr_entry.py` is the bridge between containers and backend logic
+6. **Entry Point is Critical**: `faasr_entry.py` is the bridge between containers and backend logic
 
-6. **S3 is Persistent Storage**: All data between actions must flow through S3
+7. **S3 is Persistent Storage**: All data between actions must flow through S3
 
-7. **Secrets Flow Unidirectionally**: From workflow repo → cloud platforms → containers
+8. **Secrets Flow Unidirectionally**: From workflow repo → cloud platforms → containers
+
+9. **GUI Deployment is Automatic**: Pushing to `faasr-workflow-builder/main` auto-deploys to GitHub Pages
+
+## Quick Start for Users
+
+**New to FaaSr? Start with the visual workflow builder:**
+
+1. **Open Workflow Builder GUI**: Navigate to <https://faasr.io/FaaSr-workflow-builder/>
+2. **Configure Your Workflow**:
+   - Add compute servers (GitHub Actions, AWS Lambda, GCP, etc.)
+   - Add S3-compatible data stores
+   - Create function/action nodes visually
+   - Connect nodes to define execution flow
+3. **Download Validated JSON**: Export your workflow configuration
+4. **Deploy**: Commit to `faasr-workflow` repository and use GitHub Actions
 
 ## Additional Resources
 
+- **FaaSr Workflow Builder GUI**: <https://faasr.io/FaaSr-workflow-builder/> (Start here!)
 - **FaaSr Documentation**: <https://faasr.io>
-- **Workflow Builder**: <https://faasr.io/FaaSr-workflow-builder/>
 - **Main GitHub Organization**: <https://github.com/FaaSr>
 - **Tutorial**: See `faasr-docs/docs/tutorial.md`
 - **Example Workflows**: See `faasr-workflow/*.json`
