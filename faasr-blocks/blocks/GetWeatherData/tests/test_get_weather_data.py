@@ -26,7 +26,7 @@ def test_get_weather_data_success():
     payload = json.loads((FIXTURES_DIR / "mock_weather_response.json").read_text(encoding="utf-8"))
 
     with faasr_test_environment(FIXTURES_DIR, "blocks.GetWeatherData.src.get_weather_data") as env:
-        env["secret"].with_secret("OPENWEATHER_API_KEY", "test_api_key")
+        env.secret.with_secret("OPENWEATHER_API_KEY", "test_api_key")
 
         mock_resp = MagicMock()
         mock_resp.json.return_value = payload
@@ -41,8 +41,8 @@ def test_get_weather_data_success():
                 location_name="Corvallis, OR",
             )
 
-        assert len(env["put_file"].uploaded_files) == 1
-        up = env["put_file"].uploaded_files[0]
+        assert len(env.put_file.uploaded_files) == 1
+        up = env.put_file.uploaded_files[0]
         assert up["remote_file"] == "weather.json"
         assert up["remote_folder"] == "test_folder"
         assert up["dest_path"].exists()
@@ -50,8 +50,8 @@ def test_get_weather_data_success():
         assert written["city"]["name"] == "Corvallis"
         assert len(written["list"]) == 2
 
-        assert "Successfully retrieved API key" in env["log"].log_messages
-        assert any("Fetched forecast data for Corvallis" in m for m in env["log"].log_messages)
+        assert "Successfully retrieved API key" in env.log.log_messages
+        assert any("Fetched forecast data for Corvallis" in m for m in env.log.log_messages)
 
 
 def test_get_weather_data_missing_secret():

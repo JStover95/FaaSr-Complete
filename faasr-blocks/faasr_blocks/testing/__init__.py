@@ -1,4 +1,4 @@
-from faasr_blocks.testing.harness import faasr_test_environment
+from faasr_blocks.testing.harness import FaaSrTestHarness, faasr_test_environment
 from faasr_blocks.testing.mocks import (
     MockFaaSrDeleteFile,
     MockFaaSrExit,
@@ -14,6 +14,7 @@ from faasr_blocks.testing.mocks import (
 )
 
 __all__ = [
+    "FaaSrTestHarness",
     "MockFaaSrDeleteFile",
     "MockFaaSrExit",
     "MockFaaSrGetFile",
