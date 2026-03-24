@@ -16,7 +16,7 @@ SRC = BLOCK_ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-import get_weather_data  # noqa: E402
+import blocks.GetWeatherData.src.get_weather_data as get_weather_data  # noqa: E402
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -25,7 +25,7 @@ def test_get_weather_data_success():
     """Happy path: secret, HTTP response, S3 put, logs."""
     payload = json.loads((FIXTURES_DIR / "mock_weather_response.json").read_text(encoding="utf-8"))
 
-    with faasr_test_environment(FIXTURES_DIR, "get_weather_data") as env:
+    with faasr_test_environment(FIXTURES_DIR, "blocks.GetWeatherData.src.get_weather_data") as env:
         env["secret"].with_secret("OPENWEATHER_API_KEY", "test_api_key")
 
         mock_resp = MagicMock()
@@ -56,7 +56,7 @@ def test_get_weather_data_success():
 
 def test_get_weather_data_missing_secret():
     """Missing OPENWEATHER_API_KEY raises before HTTP call."""
-    with faasr_test_environment(FIXTURES_DIR, "get_weather_data") as env:
+    with faasr_test_environment(FIXTURES_DIR, "blocks.GetWeatherData.src.get_weather_data"):
         with patch.object(get_weather_data.requests, "get") as mock_get:
             with pytest.raises(KeyError, match="OPENWEATHER_API_KEY"):
                 get_weather_data.get_weather_data(
