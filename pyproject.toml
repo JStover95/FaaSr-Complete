@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "faasr-py",
+    "httpx>=0.28.1",
     "jsonschema>=4.23.0",
     "pydantic>=2.11.7",
     "pytest>=7.4.0",
