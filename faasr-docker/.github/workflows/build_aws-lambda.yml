@@ -30,6 +30,29 @@ on:
         required: true
         default: 'us-east-1'
 
+  # ---- Added for orchestrator support ----
+  workflow_call:
+    inputs:
+      BASE_IMAGE:
+        type: string
+        required: true
+      TARGET_NAME:
+        type: string
+        required: true
+      FAASR_VERSION:
+        type: string
+        required: true
+      FAASR_INSTALL_REPO:
+        type: string
+        required: true
+      AWS_REGION:
+        type: string
+        required: true
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
 
 permissions: write-all
 
@@ -47,14 +70,14 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ github.event.inputs.AWS_REGION }}
+          aws-region: ${{ inputs.AWS_REGION }}
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       - name: Build aws-lambda Container registry image
         run: |
           cd faas_specific
-          docker build -f aws-lambda.Dockerfile -t ${{ steps.login-ecr.outputs.registry }}/${{ github.event.inputs.TARGET_NAME }}:${{ github.event.inputs.FAASR_VERSION }} --build-arg BASE_IMAGE=${{ github.event.inputs.BASE_IMAGE }} --build-arg FAASR_VERSION=${{ github.event.inputs.FAASR_VERSION }} --build-arg FAASR_INSTALL_REPO=${{ github.event.inputs.FAASR_INSTALL_REPO }} .
+          docker build -f aws-lambda.Dockerfile -t ${{ steps.login-ecr.outputs.registry }}/${{ inputs.TARGET_NAME }}:${{ inputs.FAASR_VERSION }} --build-arg BASE_IMAGE=${{ inputs.BASE_IMAGE }} --build-arg FAASR_VERSION=${{ inputs.FAASR_VERSION }} --build-arg FAASR_INSTALL_REPO=${{ inputs.FAASR_INSTALL_REPO }} .
       - name: Push aws-lambda image to ECR
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ github.event.inputs.TARGET_NAME }}:${{ github.event.inputs.FAASR_VERSION }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ inputs.TARGET_NAME }}:${{ inputs.FAASR_VERSION }}

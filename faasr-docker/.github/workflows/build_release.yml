@@ -1,0 +1,274 @@
+name: FaaSr Release Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      FAASR_VERSION:
+        description: 'version tag e.g. 1.2.0'
+        required: true
+      FAASR_INSTALL_REPO:
+        description: 'install repo'
+        required: true
+        default: 'FaaSr/FaaSr-Backend'
+
+      # --- Base images ---
+      BASE_IMAGE_PYTHON:
+        description: 'Python base image e.g. faasr/base-python:1.2.0'
+        required: false
+        default: ''
+      BASE_IMAGE_R:
+        description: 'R base image e.g. faasr/base-r:1.2.0'
+        required: false
+        default: ''
+
+      # --- Runtime selection ---
+      include_python:
+        description: 'Python'
+        type: boolean
+        default: false
+      include_r:
+        description: 'R'
+        type: boolean
+        default: false
+
+      # --- Platform selection ---
+      build_github_actions:
+        description: 'GitHub Actions'
+        type: boolean
+        default: false
+      build_openwhisk:
+        description: 'OpenWhisk'
+        type: boolean
+        default: false
+      build_aws_lambda:
+        description: 'AWS Lambda'
+        type: boolean
+        default: false
+      build_gcp:
+        description: 'GCP'
+        type: boolean
+        default: false
+      build_slurm:
+        description: 'SLURM'
+        type: boolean
+        default: false
+
+      # --- Registry config ---
+      GHCR_IO_REPO:
+        description: 'GHCR org/user'
+        required: false
+        default: 'faasr'
+      AWS_REGION:
+        description: 'AWS ECR region'
+        required: false
+        default: 'us-east-1'
+
+permissions: write-all
+
+jobs:
+
+  # ============================================================
+  # INPUT VALIDATION — all platform jobs depend on this
+  # ============================================================
+
+  validate-inputs:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check at least one runtime is selected
+        run: |
+          if [[ "${{ inputs.include_python }}" != "true" && "${{ inputs.include_r }}" != "true" ]]; then
+            echo "::error::At least one runtime (Python or R) must be selected."
+            exit 1
+          fi
+
+      - name: Check at least one platform is selected
+        run: |
+          if [[ "${{ inputs.build_github_actions }}" != "true" && \
+                "${{ inputs.build_openwhisk }}"      != "true" && \
+                "${{ inputs.build_aws_lambda }}"     != "true" && \
+                "${{ inputs.build_gcp }}"            != "true" && \
+                "${{ inputs.build_slurm }}"          != "true" ]]; then
+            echo "::error::At least one platform must be selected."
+            exit 1
+          fi
+
+      - name: Check BASE_IMAGE_PYTHON is provided and well-formed
+        if: ${{ inputs.include_python == true }}
+        run: |
+          img="${{ inputs.BASE_IMAGE_PYTHON }}"
+          if [[ -z "$img" ]]; then
+            echo "::error::BASE_IMAGE_PYTHON is required when the Python runtime is selected."
+            exit 1
+          fi
+          if [[ "$img" != *:* ]]; then
+            echo "::error::BASE_IMAGE_PYTHON must include a tag (e.g. faasr/base-python:1.2.0). Got: '$img'"
+            exit 1
+          fi
+          tag="${img##*:}"
+          if [[ -z "$tag" ]]; then
+            echo "::error::BASE_IMAGE_PYTHON has an empty tag after the colon. Got: '$img'"
+            exit 1
+          fi
+
+      - name: Check BASE_IMAGE_R is provided and well-formed
+        if: ${{ inputs.include_r == true }}
+        run: |
+          img="${{ inputs.BASE_IMAGE_R }}"
+          if [[ -z "$img" ]]; then
+            echo "::error::BASE_IMAGE_R is required when the R runtime is selected."
+            exit 1
+          fi
+          if [[ "$img" != *:* ]]; then
+            echo "::error::BASE_IMAGE_R must include a tag (e.g. faasr/base-r:1.2.0). Got: '$img'"
+            exit 1
+          fi
+          tag="${img##*:}"
+          if [[ -z "$tag" ]]; then
+            echo "::error::BASE_IMAGE_R has an empty tag after the colon. Got: '$img'"
+            exit 1
+          fi
+
+  # ============================================================
+  # GITHUB ACTIONS PLATFORM BUILDS
+  # ============================================================
+
+  build-github-actions-python:
+    name: GitHub Actions (Python)
+    needs: validate-inputs
+    if: ${{ inputs.build_github_actions && inputs.include_python }}
+    uses: ./.github/workflows/build_github-actions.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_PYTHON }}
+      TARGET_NAME: github-actions-python
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
+      GHCR_IO_REPO: ${{ inputs.GHCR_IO_REPO }}
+
+  build-github-actions-r:
+    name: GitHub Actions (R)
+    needs: validate-inputs
+    if: ${{ inputs.build_github_actions && inputs.include_r }}
+    uses: ./.github/workflows/build_github-actions.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_R }}
+      TARGET_NAME: github-actions-r
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
+      GHCR_IO_REPO: ${{ inputs.GHCR_IO_REPO }}
+
+  # ============================================================
+  # OPENWHISK PLATFORM BUILDS
+  # ============================================================
+
+  build-openwhisk-python:
+    name: OpenWhisk (Python)
+    needs: validate-inputs
+    if: ${{ inputs.build_openwhisk && inputs.include_python }}
+    uses: ./.github/workflows/build_openwhisk.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_PYTHON }}
+      TARGET_NAME: openwhisk-python
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
+
+  build-openwhisk-r:
+    name: OpenWhisk (R)
+    needs: validate-inputs
+    if: ${{ inputs.build_openwhisk && inputs.include_r }}
+    uses: ./.github/workflows/build_openwhisk.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_R }}
+      TARGET_NAME: openwhisk-r
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
+
+  # ============================================================
+  # AWS LAMBDA PLATFORM BUILDS
+  # ============================================================
+
+  build-aws-lambda-python:
+    name: AWS Lambda (Python)
+    needs: validate-inputs
+    if: ${{ inputs.build_aws_lambda && inputs.include_python }}
+    uses: ./.github/workflows/build_aws-lambda.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_PYTHON }}
+      TARGET_NAME: aws-lambda-python
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+
+  build-aws-lambda-r:
+    name: AWS Lambda (R)
+    needs: validate-inputs
+    if: ${{ inputs.build_aws_lambda && inputs.include_r }}
+    uses: ./.github/workflows/build_aws-lambda.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_R }}
+      TARGET_NAME: aws-lambda-r
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+
+  # ============================================================
+  # GCP PLATFORM BUILDS
+  # ============================================================
+
+  build-gcp-python:
+    name: GCP (Python)
+    needs: validate-inputs
+    if: ${{ inputs.build_gcp && inputs.include_python }}
+    uses: ./.github/workflows/build_gcp.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_PYTHON }}
+      TARGET_NAME: gcp-python
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
+
+  build-gcp-r:
+    name: GCP (R)
+    needs: validate-inputs
+    if: ${{ inputs.build_gcp && inputs.include_r }}
+    uses: ./.github/workflows/build_gcp.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_R }}
+      TARGET_NAME: gcp-r
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
+
+  # ============================================================
+  # SLURM PLATFORM BUILDS
+  # ============================================================
+
+  build-slurm-python:
+    name: SLURM (Python)
+    needs: validate-inputs
+    if: ${{ inputs.build_slurm && inputs.include_python }}
+    uses: ./.github/workflows/build_slurm.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_PYTHON }}
+      TARGET_NAME: slurm-python
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
+
+  build-slurm-r:
+    name: SLURM (R)
+    needs: validate-inputs
+    if: ${{ inputs.build_slurm && inputs.include_r }}
+    uses: ./.github/workflows/build_slurm.yml
+    secrets: inherit
+    with:
+      BASE_IMAGE: ${{ inputs.BASE_IMAGE_R }}
+      TARGET_NAME: slurm-r
+      FAASR_VERSION: ${{ inputs.FAASR_VERSION }}
+      FAASR_INSTALL_REPO: ${{ inputs.FAASR_INSTALL_REPO }}
